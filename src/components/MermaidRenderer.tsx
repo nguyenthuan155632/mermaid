@@ -434,6 +434,8 @@ export default function MermaidRenderer({
         justifyContent: "center",
         overflow: "hidden",
         bgcolor: "background.paper",
+        backgroundImage: "radial-gradient(circle, #d4d4d4 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
         p: 2,
       }}
     >
@@ -569,6 +571,8 @@ export default function MermaidRenderer({
                   p: 2,
                   cursor: isPanning ? "grabbing" : zoom > 1 ? "grab" : "default",
                   userSelect: "none",
+                  backgroundImage: "radial-gradient(circle, #d4d4d4 1px, transparent 1px)",
+                  backgroundSize: "20px 20px",
                 }}
               >
                 <Box
