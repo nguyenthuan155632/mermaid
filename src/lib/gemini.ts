@@ -1,16 +1,22 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY environment variable is not set");
-}
+let genAI: GoogleGenerativeAI | null = null;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+function getGenAI(): GoogleGenerativeAI {
+  if (!genAI) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY environment variable is not set");
+    }
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  }
+  return genAI;
+}
 
 export async function fixMermaidDiagram(
   code: string,
   errorMessage: string
 ): Promise<{ fixedCode: string; explanation: string }> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const model = getGenAI().getGenerativeModel({ model: "gemini-pro" });
 
   const prompt = `You are a Mermaid diagram syntax expert. Fix the following Mermaid diagram code that has an error.
 

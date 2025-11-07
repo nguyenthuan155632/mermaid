@@ -150,7 +150,7 @@ export default function DiagramsPage() {
         ) : (
           <Grid container spacing={3}>
             {diagrams.map((diagram) => (
-              <Grid item xs={12} sm={6} md={4} key={diagram.id}>
+              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={diagram.id}>
                 <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
                   <Box sx={{ height: 200, overflow: "hidden" }}>
                     <MermaidRenderer code={diagram.code} />

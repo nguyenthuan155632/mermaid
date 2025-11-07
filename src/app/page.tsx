@@ -39,7 +39,7 @@ export default function HomePage() {
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: "#fafafa" }}>
       <Container maxWidth="lg" sx={{ py: 8, flex: 1 }}>
         <Grid container spacing={6} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
               <Box
                 component="svg"
@@ -89,7 +89,7 @@ export default function HomePage() {
               </Button>
             </Box>
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Paper sx={{ p: 4, borderRadius: 2 }} elevation={2}>
               <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
                 Features

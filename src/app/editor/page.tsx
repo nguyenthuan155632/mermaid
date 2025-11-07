@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Button,
@@ -33,7 +33,8 @@ import { useSession, signOut } from "next-auth/react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { exportToPNG, exportToSVG } from "@/lib/export";
 
-export default function EditorPage() {
+function EditorContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
   const [code, setCode] = useState("");
@@ -50,7 +51,6 @@ export default function EditorPage() {
   const debouncedCode = useDebounce(code, 300);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
     const id = searchParams.get("id");
 
     if (id) {
@@ -75,7 +75,7 @@ export default function EditorPage() {
         setCode(savedCode);
       }
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     localStorage.setItem("mermaid-draft", code);
@@ -377,6 +377,14 @@ export default function EditorPage() {
         onSelectSample={(code) => setCode(code)}
       />
     </Box>
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={<Box sx={{ p: 3 }}><Typography>Loading...</Typography></Box>}>
+      <EditorContent />
+    </Suspense>
   );
 }
 
