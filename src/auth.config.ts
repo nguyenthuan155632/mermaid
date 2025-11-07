@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export const authConfig = {
+  trustHost: true,
   pages: {
     signIn: "/login",
   },
