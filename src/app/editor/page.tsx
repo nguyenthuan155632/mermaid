@@ -14,17 +14,22 @@ import {
   Tabs,
   Divider,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from "@mui/material";
 import {
   Save,
   GetApp,
   Share,
   AutoFixHigh,
-  Home,
-  GitHub,
-  History,
   Menu as MenuIcon,
-  Close,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
@@ -47,6 +52,9 @@ function EditorContent() {
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+  const [pngDialogOpen, setPngDialogOpen] = useState(false);
+  const [pngResolution, setPngResolution] = useState<number>(2);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const debouncedCode = useDebounce(code, 300);
 
@@ -75,7 +83,8 @@ function EditorContent() {
         setCode(savedCode);
       }
     }
-  }, [searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("id")]); // Only re-run when the 'id' parameter changes, not zoom/pan
 
   useEffect(() => {
     localStorage.setItem("mermaid-draft", code);
@@ -88,6 +97,7 @@ function EditorContent() {
     }
 
     setSaving(true);
+    setSaveSuccess(false);
     try {
       const url = diagramId ? `/api/diagrams/${diagramId}` : "/api/diagrams";
       const method = diagramId ? "PATCH" : "POST";
@@ -111,7 +121,11 @@ function EditorContent() {
         // Update URL with the new diagram ID
         router.replace(`/editor?id=${data.id}`);
       }
+      setSaveSuccess(true);
       alert("Diagram saved successfully!");
+
+      // Reset success state after animation
+      setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       alert("Failed to save diagram");
     } finally {
@@ -121,7 +135,8 @@ function EditorContent() {
 
   const handleExportPNG = async () => {
     try {
-      await exportToPNG(debouncedCode, title || "diagram");
+      await exportToPNG(debouncedCode, title || "diagram", pngResolution);
+      setPngDialogOpen(false);
     } catch (err) {
       alert("Failed to export PNG");
     }
@@ -218,12 +233,6 @@ function EditorContent() {
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-            <IconButton onClick={() => window.open("https://github.com", "_blank")}>
-              <GitHub />
-            </IconButton>
-            <IconButton>
-              <History />
-            </IconButton>
             <Button
               variant="outlined"
               startIcon={<Share />}
@@ -238,9 +247,51 @@ function EditorContent() {
               startIcon={<Save />}
               onClick={handleSave}
               disabled={saving}
-              sx={{ bgcolor: "primary.main", color: "white" }}
+              sx={{
+                bgcolor: saveSuccess ? "success.main" : "primary.main",
+                color: "white",
+                position: "relative",
+                overflow: "hidden",
+                transition: "all 0.3s ease",
+                transform: saving ? "scale(0.95)" : "scale(1)",
+                "&:hover": {
+                  bgcolor: saveSuccess ? "success.dark" : "primary.dark",
+                  transform: "scale(1.05)",
+                },
+                "&:active": {
+                  transform: "scale(0.95)",
+                },
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  width: "0",
+                  height: "0",
+                  borderRadius: "50%",
+                  background: "rgba(255, 255, 255, 0.5)",
+                  transform: "translate(-50%, -50%)",
+                  transition: "width 0.6s, height 0.6s",
+                },
+                "&:active::before": {
+                  width: "300px",
+                  height: "300px",
+                },
+                "@keyframes pulse": {
+                  "0%": {
+                    boxShadow: "0 0 0 0 rgba(25, 118, 210, 0.7)",
+                  },
+                  "70%": {
+                    boxShadow: "0 0 0 10px rgba(25, 118, 210, 0)",
+                  },
+                  "100%": {
+                    boxShadow: "0 0 0 0 rgba(25, 118, 210, 0)",
+                  },
+                },
+                animation: saving ? "pulse 1.5s infinite" : "none",
+              }}
             >
-              {saving ? "Saving..." : "Save diagram"}
+              {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save diagram"}
             </Button>
           </Box>
         </Toolbar>
@@ -303,7 +354,7 @@ function EditorContent() {
                     <Button
                       variant="outlined"
                       startIcon={<GetApp />}
-                      onClick={handleExportPNG}
+                      onClick={() => setPngDialogOpen(true)}
                       size="small"
                       fullWidth
                     >
@@ -376,6 +427,79 @@ function EditorContent() {
         onClose={() => setSamplesOpen(false)}
         onSelectSample={(code) => setCode(code)}
       />
+
+      {/* PNG Export Resolution Dialog */}
+      <Dialog open={pngDialogOpen} onClose={() => setPngDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Export PNG</DialogTitle>
+        <DialogContent>
+          <FormControl component="fieldset" sx={{ mt: 2, width: "100%" }}>
+            <FormLabel component="legend" sx={{ mb: 2, fontWeight: 600 }}>
+              Select Resolution Quality
+            </FormLabel>
+            <RadioGroup
+              value={pngResolution.toString()}
+              onChange={(e) => setPngResolution(Number(e.target.value))}
+            >
+              <FormControlLabel
+                value="1"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body1" fontWeight={500}>1x - Standard</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Normal resolution (smallest file size)
+                    </Typography>
+                  </Box>
+                }
+              />
+              <FormControlLabel
+                value="2"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body1" fontWeight={500}>2x - High Quality</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Recommended for most uses (2x pixels)
+                    </Typography>
+                  </Box>
+                }
+              />
+              <FormControlLabel
+                value="3"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body1" fontWeight={500}>3x - Very High Quality</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Great for presentations (3x pixels)
+                    </Typography>
+                  </Box>
+                }
+              />
+              <FormControlLabel
+                value="4"
+                control={<Radio />}
+                label={
+                  <Box>
+                    <Typography variant="body1" fontWeight={500}>4x - Ultra Quality</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Maximum quality for print (4x pixels, large file)
+                    </Typography>
+                  </Box>
+                }
+              />
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPngDialogOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleExportPNG} variant="contained" color="primary">
+            Export
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

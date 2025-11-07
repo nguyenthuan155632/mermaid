@@ -92,6 +92,9 @@ export default function MermaidRenderer({
       try {
         const params = new URLSearchParams(window.location.search);
 
+        // Preserve the 'id' parameter if it exists
+        const currentId = params.get("id");
+
         // Round zoom to 2 decimal places for cleaner URLs
         params.set("zoom", newZoom.toFixed(2));
 
@@ -434,8 +437,8 @@ export default function MermaidRenderer({
         justifyContent: "center",
         overflow: "hidden",
         bgcolor: "background.paper",
-        backgroundImage: "radial-gradient(circle, #d4d4d4 1px, transparent 1px)",
-        backgroundSize: "20px 20px",
+        backgroundImage: "radial-gradient(circle, #f0f0f0 2px, transparent 2px)",
+        backgroundSize: "30px 30px",
         p: 2,
       }}
     >
@@ -571,8 +574,8 @@ export default function MermaidRenderer({
                   p: 2,
                   cursor: isPanning ? "grabbing" : zoom > 1 ? "grab" : "default",
                   userSelect: "none",
-                  backgroundImage: "radial-gradient(circle, #d4d4d4 1px, transparent 1px)",
-                  backgroundSize: "20px 20px",
+                  backgroundImage: "radial-gradient(circle, #f0f0f0 2px, transparent 2px)",
+                  backgroundSize: "30px 30px",
                 }}
               >
                 <Box
