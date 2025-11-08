@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -11,7 +11,6 @@ import {
   Typography,
   IconButton,
   Divider,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -24,6 +23,7 @@ import {
   Stack,
   useTheme,
   useMediaQuery,
+  Drawer,
 } from "@mui/material";
 import {
   Save,
@@ -34,11 +34,12 @@ import {
   LibraryBooks,
   Image as ImageIcon,
   Apps,
+  Edit,
+  Close,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
 import MermaidRenderer from "@/components/MermaidRenderer";
-import { useSession, signOut } from "next-auth/react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { exportToPNG, exportToSVG } from "@/lib/export";
 
@@ -57,6 +58,7 @@ function EditorContent() {
   const [pngDialogOpen, setPngDialogOpen] = useState(false);
   const [pngResolution, setPngResolution] = useState<number>(2);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [codeDrawerOpen, setCodeDrawerOpen] = useState(false);
 
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
@@ -289,6 +291,9 @@ function EditorContent() {
           </Box>
           {isMobile ? (
             <>
+              <IconButton onClick={() => setCodeDrawerOpen(true)} title="Edit Code" color="primary" size="small">
+                <Edit fontSize="small" />
+              </IconButton>
               <IconButton onClick={() => setSamplesOpen(true)} title="Browse Samples" color="primary" size="small">
                 <Apps fontSize="small" />
               </IconButton>
@@ -497,6 +502,102 @@ function EditorContent() {
         onClose={() => setSamplesOpen(false)}
         onSelectSample={(code) => setCode(code)}
       />
+
+      {/* Mobile Code Editor Drawer */}
+      <Drawer
+        anchor="bottom"
+        open={codeDrawerOpen}
+        onClose={() => setCodeDrawerOpen(false)}
+        keepMounted
+        PaperProps={{
+          sx: {
+            height: "50vh",
+            borderTopLeftRadius: 16,
+            borderTopRightRadius: 16,
+            bgcolor: "#fafafa",
+          },
+        }}
+        transitionDuration={300}
+      >
+        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+          {/* Header */}
+          <Box
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              bgcolor: "white",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            <Edit sx={{ color: "primary.main", fontSize: 20 }} />
+            <Typography
+              variant="h6"
+              sx={{
+                flex: 1,
+                fontWeight: 600,
+                fontSize: "1rem"
+              }}
+            >
+              Edit Diagram
+            </Typography>
+            <IconButton onClick={() => setCodeDrawerOpen(false)} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+
+          {/* Title Input */}
+          <Box sx={{ p: 2, bgcolor: "white", borderBottom: "1px solid #e5e7eb" }}>
+            <TextField
+              placeholder="Diagram Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              fullWidth
+              size="small"
+              variant="outlined"
+            />
+          </Box>
+
+          {/* Code Editor */}
+          <Box sx={{ flex: 1, overflow: "hidden" }}>
+            {codeDrawerOpen && <CodeEditor value={code} onChange={setCode} />}
+          </Box>
+
+          {/* Actions Footer */}
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: "white",
+              borderTop: "1px solid #e5e7eb",
+              display: "flex",
+              gap: 1,
+            }}
+          >
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => setSamplesOpen(true)}
+              size="small"
+            >
+              Browse Samples
+            </Button>
+            {hasError && (
+              <Button
+                fullWidth
+                variant="outlined"
+                color="warning"
+                startIcon={<AutoFixHigh />}
+                onClick={handleFixWithAI}
+                disabled={fixing}
+                size="small"
+              >
+                {fixing ? "Fixing..." : "Fix with AI"}
+              </Button>
+            )}
+          </Box>
+        </Box>
+      </Drawer>
 
       {/* PNG Export Resolution Dialog */}
       <Dialog open={pngDialogOpen} onClose={() => setPngDialogOpen(false)} maxWidth="xs" fullWidth>
