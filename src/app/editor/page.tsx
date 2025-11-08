@@ -979,8 +979,15 @@ function EditorContent() {
                 <Box
                   dangerouslySetInnerHTML={{ __html: previewSvg }}
                   sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     '& svg': {
-                      maxWidth: '100%',
+                      maxWidth: '95%',
+                      maxHeight: '95%',
+                      width: 'auto',
                       height: 'auto',
                       display: 'block'
                     }
