@@ -383,7 +383,7 @@ export default function DiagramsPage() {
           <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, alignItems: { xs: "flex-start", sm: "center" }, justifyContent: "space-between", gap: 2 }}>
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                Saved Diagrams
+                Diagrams
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Browse, search, and manage everything you have created.

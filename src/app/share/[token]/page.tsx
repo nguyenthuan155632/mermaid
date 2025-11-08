@@ -13,7 +13,7 @@ import {
   useMediaQuery,
   IconButton,
 } from "@mui/material";
-import { GetApp, ExpandMore, Close as CloseIcon } from "@mui/icons-material";
+import { GetApp, ExpandMore, Close as CloseIcon, Image as ImageIcon } from "@mui/icons-material";
 import MermaidRenderer from "@/components/MermaidRenderer";
 import { exportToPNG, exportToSVG } from "@/lib/export";
 
@@ -73,43 +73,107 @@ export default function SharePage() {
 
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
-      <AppBar position="static" color="default" elevation={0} sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
-        <Toolbar sx={{ flexWrap: isMobile ? "wrap" : "nowrap", gap: isMobile ? 1 : 0 }}>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Shared Diagram
-          </Typography>
-          <Stack
-            direction="row"
-            spacing={1}
-            flexWrap={isMobile ? "wrap" : "nowrap"}
-            justifyContent={isMobile ? "flex-end" : "flex-start"}
-            sx={{ width: { xs: "100%", md: "auto" }, mb: isMobile ? 1 : 0 }}
+      <AppBar
+        position="static"
+        color="default"
+        elevation={0}
+        sx={{
+          bgcolor: "white",
+          borderBottom: "1px solid #e5e7eb"
+        }}
+      >
+        <Toolbar
+          sx={{
+            minHeight: { xs: 56, md: 64 },
+            gap: isMobile ? 0.5 : 1,
+            px: { xs: 1, md: 2 }
+          }}
+        >
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{
+              flexGrow: 1,
+              fontWeight: 600,
+              fontSize: { xs: "0.95rem", md: "1.25rem" },
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              color: "text.primary"
+            }}
           >
-            <Button
-              variant={isMobile ? "outlined" : "text"}
-              endIcon={<ExpandMore sx={{ transform: detailsOpen ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s" }} />}
-              onClick={() => setDetailsOpen((prev) => !prev)}
-              sx={{ flexGrow: isMobile ? 1 : 0 }}
+            {diagram?.title || "Shared Diagram"}
+          </Typography>
+
+          {isMobile ? (
+            <>
+              <IconButton
+                onClick={() => setDetailsOpen((prev) => !prev)}
+                title={detailsOpen ? "Hide Details" : "Show Details"}
+                color="primary"
+                size="small"
+              >
+                <ExpandMore
+                  fontSize="small"
+                  sx={{
+                    transform: detailsOpen ? "rotate(180deg)" : "rotate(0)",
+                    transition: "transform 0.2s"
+                  }}
+                />
+              </IconButton>
+              <IconButton
+                onClick={handleExportPNG}
+                title="Export PNG"
+                color="primary"
+                size="small"
+              >
+                <ImageIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                onClick={handleExportSVG}
+                title="Export SVG"
+                color="primary"
+                size="small"
+              >
+                <GetApp fontSize="small" />
+              </IconButton>
+            </>
+          ) : (
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
             >
-              {detailsOpen ? "Hide Details" : "Show Details"}
-            </Button>
-            <Button
-              variant={isMobile ? "outlined" : "text"}
-              startIcon={!isMobile && <GetApp />}
-              onClick={handleExportPNG}
-              sx={{ flexGrow: isMobile ? 1 : 0 }}
-            >
-              Export PNG
-            </Button>
-            <Button
-              variant={isMobile ? "outlined" : "text"}
-              startIcon={!isMobile && <GetApp />}
-              onClick={handleExportSVG}
-              sx={{ flexGrow: isMobile ? 1 : 0 }}
-            >
-              Export SVG
-            </Button>
-          </Stack>
+              <Button
+                variant="text"
+                endIcon={
+                  <ExpandMore
+                    sx={{
+                      transform: detailsOpen ? "rotate(180deg)" : "rotate(0)",
+                      transition: "transform 0.2s"
+                    }}
+                  />
+                }
+                onClick={() => setDetailsOpen((prev) => !prev)}
+              >
+                {detailsOpen ? "Hide Details" : "Show Details"}
+              </Button>
+              <Button
+                variant="text"
+                startIcon={<ImageIcon />}
+                onClick={handleExportPNG}
+              >
+                Export PNG
+              </Button>
+              <Button
+                variant="text"
+                startIcon={<GetApp />}
+                onClick={handleExportSVG}
+              >
+                Export SVG
+              </Button>
+            </Stack>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -159,6 +223,6 @@ export default function SharePage() {
           </Box>
         )}
       </Box>
-    </Box>
+    </Box >
   );
 }

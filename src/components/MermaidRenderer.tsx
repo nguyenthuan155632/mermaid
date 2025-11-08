@@ -600,22 +600,46 @@ export default function MermaidRenderer({
             top: 8,
             right: 8,
             display: "flex",
-            gap: 1,
+            gap: 0.5,
             zIndex: 1,
+            bgcolor: "primary.main",
+            borderRadius: 1,
+            p: 0.5,
+            boxShadow: 2,
           }}
         >
-          <IconButton onClick={handleZoomIn} size="small" title="Zoom In">
-            <ZoomIn />
+          <IconButton
+            onClick={handleZoomIn}
+            size="small"
+            title="Zoom In"
+            sx={{ color: "white" }}
+          >
+            <ZoomIn fontSize="small" />
           </IconButton>
-          <IconButton onClick={handleZoomOut} size="small" title="Zoom Out">
-            <ZoomOut />
+          <IconButton
+            onClick={handleZoomOut}
+            size="small"
+            title="Zoom Out"
+            sx={{ color: "white" }}
+          >
+            <ZoomOut fontSize="small" />
           </IconButton>
-          <IconButton onClick={handleResetZoom} size="small" title="Fit to Screen">
-            <FitScreen />
+          <IconButton
+            onClick={handleResetZoom}
+            size="small"
+            title="Fit to Screen"
+            sx={{ color: "white" }}
+          >
+            <FitScreen fontSize="small" />
           </IconButton>
           {!isFullscreen && (
-            <IconButton onClick={handleFullscreen} size="small" title="Fullscreen">
-              <Fullscreen />
+            <IconButton
+              onClick={handleFullscreen}
+              size="small"
+              title="Fullscreen"
+              sx={{ color: "white" }}
+            >
+              <Fullscreen fontSize="small" />
             </IconButton>
           )}
         </Box>
@@ -700,21 +724,45 @@ export default function MermaidRenderer({
                   top: 8,
                   right: 8,
                   display: "flex",
-                  gap: 1,
+                  gap: 0.5,
                   zIndex: 1,
+                  bgcolor: "primary.main",
+                  borderRadius: 1,
+                  p: 0.5,
+                  boxShadow: 2,
                 }}
               >
-                <IconButton onClick={handleZoomIn} size="small" title="Zoom In">
-                  <ZoomIn />
+                <IconButton
+                  onClick={handleZoomIn}
+                  size="small"
+                  title="Zoom In"
+                  sx={{ color: "white" }}
+                >
+                  <ZoomIn fontSize="small" />
                 </IconButton>
-                <IconButton onClick={handleZoomOut} size="small" title="Zoom Out">
-                  <ZoomOut />
+                <IconButton
+                  onClick={handleZoomOut}
+                  size="small"
+                  title="Zoom Out"
+                  sx={{ color: "white" }}
+                >
+                  <ZoomOut fontSize="small" />
                 </IconButton>
-                <IconButton onClick={handleResetZoom} size="small" title="Fit to Screen">
-                  <FitScreen />
+                <IconButton
+                  onClick={handleResetZoom}
+                  size="small"
+                  title="Fit to Screen"
+                  sx={{ color: "white" }}
+                >
+                  <FitScreen fontSize="small" />
                 </IconButton>
-                <IconButton onClick={handleExitFullscreen} size="small" title="Exit Fullscreen">
-                  <FullscreenExit />
+                <IconButton
+                  onClick={handleExitFullscreen}
+                  size="small"
+                  title="Exit Fullscreen"
+                  sx={{ color: "white" }}
+                >
+                  <FullscreenExit fontSize="small" />
                 </IconButton>
               </Box>
             )}

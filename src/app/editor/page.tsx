@@ -237,16 +237,28 @@ function EditorContent() {
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "#fafafa" }}>
       {/* Header */}
       <AppBar position="static" color="default" elevation={0} sx={{ bgcolor: "white", borderBottom: "1px solid #e5e7eb" }}>
-        <Toolbar sx={{ flexWrap: isMobile ? "wrap" : "nowrap", gap: isMobile ? 1 : 0 }}>
+        <Toolbar
+          sx={{
+            minHeight: { xs: 56, md: 64 },
+            gap: isMobile ? 0.5 : 1,
+            px: { xs: 1, md: 2 }
+          }}
+        >
           {!isMobile && (
             <IconButton edge="start" onClick={() => setLeftDrawerOpen(!leftDrawerOpen)} sx={{ mr: 2 }}>
               <MenuIcon />
             </IconButton>
           )}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1, mt: { xs: 3, sm: 0 } }}>
+          <Box sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexGrow: 1,
+            minWidth: 0
+          }}>
             <Box
               component="svg"
-              sx={{ width: 32, height: 32 }}
+              sx={{ width: { xs: 28, md: 32 }, height: { xs: 28, md: 32 }, flexShrink: 0 }}
               viewBox="0 0 100 100"
             >
               <rect fill="#FF2E88" width="100" height="100" rx="10" />
@@ -261,110 +273,110 @@ function EditorContent() {
                 M
               </text>
             </Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: "text.primary" }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: "text.primary",
+                fontSize: { xs: "0.95rem", md: "1.25rem" },
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}
+            >
               Mermaid Live Editor
             </Typography>
           </Box>
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            justifyContent={isMobile ? "flex-end" : "flex-start"}
-            flexWrap={isMobile ? "wrap" : "nowrap"}
-            sx={{
-              width: { xs: "100%", md: "auto" },
-              mb: isMobile ? 1 : 0,
-              gap: isMobile ? 0 : 0,
-            }}
-          >
-            {isMobile ? (
-              <>
-                <IconButton onClick={() => router.push("/diagrams")} title="My Diagrams" color="primary" size="small">
-                  <LibraryBooks fontSize="small" />
-                </IconButton>
-                <IconButton onClick={() => setPngDialogOpen(true)} title="Export PNG" color="primary" size="small">
-                  <ImageIcon fontSize="small" />
-                </IconButton>
-                <IconButton onClick={handleExportSVG} title="Export SVG" color="primary" size="small">
-                  <GetApp fontSize="small" />
-                </IconButton>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="text"
-                  startIcon={<LibraryBooks />}
-                  onClick={() => router.push("/diagrams")}
-                >
-                  My Diagrams
-                </Button>
-              </>
-            )}
-            {!isMobile && (
-              <>
-                <Button
-                  variant="outlined"
-                  startIcon={<Share />}
-                  onClick={handleShare}
-                  disabled={!diagramId}
-                  sx={{ mr: 1 }}
-                >
-                  Share
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<Save />}
-                  onClick={handleSave}
-                  disabled={saving}
-                  sx={{
-                    bgcolor: saveSuccess ? "success.main" : "primary.main",
-                    color: "white",
-                    position: "relative",
-                    overflow: "hidden",
-                    transition: "all 0.3s ease",
-                    transform: saving ? "scale(0.95)" : "scale(1)",
-                    "&:hover": {
-                      bgcolor: saveSuccess ? "success.dark" : "primary.dark",
-                      transform: "scale(1.05)",
+          {isMobile ? (
+            <>
+              <IconButton onClick={() => router.push("/diagrams")} title="My Diagrams" color="primary" size="small">
+                <LibraryBooks fontSize="small" />
+              </IconButton>
+              <IconButton onClick={handleShare} title="Share" color="primary" size="small" disabled={!diagramId}>
+                <Share fontSize="small" />
+              </IconButton>
+              <IconButton onClick={() => setPngDialogOpen(true)} title="Export PNG" color="primary" size="small">
+                <ImageIcon fontSize="small" />
+              </IconButton>
+              <IconButton onClick={handleExportSVG} title="Export SVG" color="primary" size="small">
+                <GetApp fontSize="small" />
+              </IconButton>
+            </>
+          ) : (
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+            >
+              <Button
+                variant="text"
+                startIcon={<LibraryBooks />}
+                onClick={() => router.push("/diagrams")}
+              >
+                My Diagrams
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<Share />}
+                onClick={handleShare}
+                disabled={!diagramId}
+                sx={{ mr: 1 }}
+              >
+                Share
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Save />}
+                onClick={handleSave}
+                disabled={saving}
+                sx={{
+                  bgcolor: saveSuccess ? "success.main" : "primary.main",
+                  color: "white",
+                  position: "relative",
+                  overflow: "hidden",
+                  transition: "all 0.3s ease",
+                  transform: saving ? "scale(0.95)" : "scale(1)",
+                  "&:hover": {
+                    bgcolor: saveSuccess ? "success.dark" : "primary.dark",
+                    transform: "scale(1.05)",
+                  },
+                  "&:active": {
+                    transform: "scale(0.95)",
+                  },
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: "0",
+                    height: "0",
+                    borderRadius: "50%",
+                    background: "rgba(255, 255, 255, 0.5)",
+                    transform: "translate(-50%, -50%)",
+                    transition: "width 0.6s, height 0.6s",
+                  },
+                  "&:active::before": {
+                    width: "300px",
+                    height: "300px",
+                  },
+                  "@keyframes pulse": {
+                    "0%": {
+                      boxShadow: "0 0 0 0 rgba(25, 118, 210, 0.7)",
                     },
-                    "&:active": {
-                      transform: "scale(0.95)",
+                    "70%": {
+                      boxShadow: "0 0 0 10px rgba(25, 118, 210, 0)",
                     },
-                    "&::before": {
-                      content: '""',
-                      position: "absolute",
-                      top: "50%",
-                      left: "50%",
-                      width: "0",
-                      height: "0",
-                      borderRadius: "50%",
-                      background: "rgba(255, 255, 255, 0.5)",
-                      transform: "translate(-50%, -50%)",
-                      transition: "width 0.6s, height 0.6s",
+                    "100%": {
+                      boxShadow: "0 0 0 0 rgba(25, 118, 210, 0)",
                     },
-                    "&:active::before": {
-                      width: "300px",
-                      height: "300px",
-                    },
-                    "@keyframes pulse": {
-                      "0%": {
-                        boxShadow: "0 0 0 0 rgba(25, 118, 210, 0.7)",
-                      },
-                      "70%": {
-                        boxShadow: "0 0 0 10px rgba(25, 118, 210, 0)",
-                      },
-                      "100%": {
-                        boxShadow: "0 0 0 0 rgba(25, 118, 210, 0)",
-                      },
-                    },
-                    animation: saving ? "pulse 1.5s infinite" : "none",
-                  }}
-                >
-                  {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save diagram"}
-                </Button>
-              </>
-            )}
-          </Stack>
+                  },
+                  animation: saving ? "pulse 1.5s infinite" : "none",
+                }}
+              >
+                {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save diagram"}
+              </Button>
+            </Stack>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -557,7 +569,7 @@ function EditorContent() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Box >
   );
 }
 
