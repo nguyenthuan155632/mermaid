@@ -156,8 +156,8 @@ export default function MermaidRenderer({
         e.preventDefault();
         e.stopPropagation();
 
-        // Increased sensitivity for more responsive zoom (3x faster: 0.03)
-        const delta = e.deltaY * -0.03;
+        // Increased sensitivity for more responsive zoom (10x faster: 0.3)
+        const delta = e.deltaY * -0.3;
         setZoom((prevZoom) => Math.min(Math.max(prevZoom + delta, 0.3), 10));
       } else {
         // This is a regular scroll - pan the diagram
@@ -225,7 +225,8 @@ export default function MermaidRenderer({
         const distance = getTouchDistance(e);
         if (pinchStartDistanceRef.current > 0) {
           const scale = distance / pinchStartDistanceRef.current;
-          const nextZoom = Math.min(Math.max(pinchStartZoomRef.current * scale, 0.3), 10);
+          const adjusted = 1 + (scale - 1) * 10; // 10x pinch sensitivity
+          const nextZoom = Math.min(Math.max(pinchStartZoomRef.current * adjusted, 0.3), 10);
           setZoom(nextZoom);
         }
         e.preventDefault();
