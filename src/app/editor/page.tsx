@@ -45,7 +45,6 @@ import { exportToPNG, exportToSVG } from "@/lib/export";
 function EditorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session } = useSession();
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [diagramId, setDiagramId] = useState<string | null>(null);
@@ -285,7 +284,7 @@ function EditorContent() {
                 textOverflow: "ellipsis"
               }}
             >
-              Mermaid Live Editor
+              MermaidX
             </Typography>
           </Box>
           {isMobile ? (
@@ -477,8 +476,6 @@ function EditorContent() {
             flexDirection: "column",
             overflow: "hidden",
             bgcolor: "white",
-            transition: "all 0.3s ease",
-            p: isMobile ? 2 : 0,
           }}
         >
           <MermaidRenderer

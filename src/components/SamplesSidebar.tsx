@@ -55,9 +55,9 @@ export default function SamplesSidebar({
   const categories = Array.from(new Set(samples.map((s) => s.category)));
 
   return (
-    <Drawer 
-      anchor="right" 
-      open={open} 
+    <Drawer
+      anchor="right"
+      open={open}
       onClose={onClose}
       PaperProps={{
         sx: {
@@ -78,8 +78,15 @@ export default function SamplesSidebar({
             borderBottom: "1px solid #e5e7eb",
           }}
         >
-          <AccountTree sx={{ color: "primary.main" }} />
-          <Typography variant="h6" sx={{ flex: 1, fontWeight: 600 }}>
+          <AccountTree sx={{ color: "primary.main", fontSize: { xs: 20, sm: 24 } }} />
+          <Typography
+            variant="h6"
+            sx={{
+              flex: 1,
+              fontWeight: 600,
+              fontSize: { xs: "1rem", sm: "1.25rem" }
+            }}
+          >
             Sample Diagrams
           </Typography>
           <IconButton onClick={onClose} size="small">
@@ -104,8 +111,9 @@ export default function SamplesSidebar({
                   sx={{
                     borderRadius: "20px",
                     textTransform: "none",
-                    px: 3,
-                    py: 1,
+                    px: { xs: 2, sm: 3 },
+                    py: { xs: 0.75, sm: 1 },
+                    fontSize: { xs: "0.875rem", sm: "1rem" },
                     bgcolor: "white",
                     border: "1px solid #e5e7eb",
                     color: "text.primary",

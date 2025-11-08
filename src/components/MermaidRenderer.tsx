@@ -516,12 +516,12 @@ export default function MermaidRenderer({
 
   const handleZoomIn = () => {
     if (disableInteractions) return;
-    setZoom((prev) => Math.min(prev + 0.1, 10));
+    setZoom((prev) => Math.min(prev + 1.5, 10));
   };
 
   const handleZoomOut = () => {
     if (disableInteractions) return;
-    setZoom((prev) => Math.max(prev - 0.1, 0.3));
+    setZoom((prev) => Math.max(prev - 1.5, 0.3));
   };
 
   const handleResetZoom = () => {

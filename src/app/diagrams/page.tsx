@@ -389,7 +389,7 @@ export default function DiagramsPage() {
                 textOverflow: "ellipsis"
               }}
             >
-              Mermaid Live Editor
+              MermaidX
             </Typography>
           </Box>
           <Stack direction="row" spacing={{ xs: 0.5, md: 1 }} alignItems="center">
