@@ -655,6 +655,10 @@ export default function MermaidRenderer({
               transition: (isPanning || isPinching) ? "none" : "transform 0.2s",
               opacity: isCalculatingZoom ? 0 : 1,
               visibility: isCalculatingZoom ? "hidden" : "visible",
+              pointerEvents: disableInteractions ? "auto" : "none",
+              "& svg": {
+                pointerEvents: disableInteractions ? "auto" : "none",
+              },
             }}
             dangerouslySetInnerHTML={{ __html: svgContent }}
           />
@@ -750,6 +754,10 @@ export default function MermaidRenderer({
                     transition: (isPanning || isPinching) ? "none" : "transform 0.2s",
                     opacity: isCalculatingZoom ? 0 : 1,
                     visibility: isCalculatingZoom ? "hidden" : "visible",
+                    pointerEvents: disableInteractions ? "auto" : "none",
+                    "& svg": {
+                      pointerEvents: disableInteractions ? "auto" : "none",
+                    },
                   }}
                   dangerouslySetInnerHTML={{ __html: svgContent }}
                 />
