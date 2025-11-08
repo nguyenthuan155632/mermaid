@@ -53,6 +53,7 @@ function EditorContent() {
   const [title, setTitle] = useState("");
   const [diagramId, setDiagramId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewSvg, setPreviewSvg] = useState<string>("");
   const [hasError, setHasError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fixing, setFixing] = useState(false);
@@ -61,6 +62,7 @@ function EditorContent() {
   const [leftDrawerWidth, setLeftDrawerWidth] = useState<"normal" | "wide" | "closed">("normal");
   const [pngDialogOpen, setPngDialogOpen] = useState(false);
   const [pngResolution, setPngResolution] = useState<number>(2);
+  const [pngBackground, setPngBackground] = useState<'white' | 'transparent'>('white');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [codeDrawerOpen, setCodeDrawerOpen] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
@@ -71,6 +73,62 @@ function EditorContent() {
 
   const diagramIdParam = searchParams.get("id");
   const freshParam = searchParams.get("fresh");
+
+  // Generate preview SVG with transparent background option
+  useEffect(() => {
+    if (!debouncedCode || !pngDialogOpen) return;
+
+    const generatePreview = async () => {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        const id = `preview-${Date.now()}`;
+        const { svg } = await mermaid.render(id, debouncedCode);
+
+        // Remove white background if transparent is selected
+        if (pngBackground === 'transparent') {
+          const parser = new DOMParser();
+          const svgDoc = parser.parseFromString(svg, 'image/svg+xml');
+          const svgElement = svgDoc.querySelector('svg');
+
+          if (svgElement) {
+            // Remove white background rects
+            const rects = svgElement.querySelectorAll('rect');
+            rects.forEach((rect) => {
+              const fill = rect.getAttribute('fill');
+              const style = rect.getAttribute('style');
+              if (
+                fill && (
+                  fill.toLowerCase() === '#ffffff' ||
+                  fill.toLowerCase() === 'white' ||
+                  fill.toLowerCase() === '#fff' ||
+                  fill.toLowerCase().includes('rgb(255')
+                )
+              ) {
+                const rectWidth = rect.getAttribute('width');
+                if (rectWidth === '100%' || parseInt(rectWidth || '0') > 100) {
+                  rect.remove();
+                }
+              }
+              if (style && (style.includes('rgb(255, 255, 255)') || style.includes('#ffffff'))) {
+                const rectWidth = rect.getAttribute('width');
+                if (rectWidth === '100%' || parseInt(rectWidth || '0') > 100) {
+                  rect.remove();
+                }
+              }
+            });
+
+            setPreviewSvg(new XMLSerializer().serializeToString(svgElement));
+          }
+        } else {
+          setPreviewSvg(svg);
+        }
+      } catch (err) {
+        console.error('Preview generation error:', err);
+      }
+    };
+
+    generatePreview();
+  }, [debouncedCode, pngBackground, pngDialogOpen]);
 
   // Delay editor mounting until drawer animation completes
   useEffect(() => {
@@ -183,7 +241,7 @@ function EditorContent() {
 
   const handleExportPNG = async () => {
     try {
-      await exportToPNG(debouncedCode, title || "diagram", pngResolution);
+      await exportToPNG(debouncedCode, title || "diagram", pngResolution, pngBackground);
       setPngDialogOpen(false);
     } catch (err) {
       alert("Failed to export PNG");
@@ -192,7 +250,7 @@ function EditorContent() {
 
   const handleExportSVG = async () => {
     try {
-      await exportToSVG(debouncedCode, title || "diagram");
+      await exportToSVG(debouncedCode, title || "diagram", 'white');
     } catch (err) {
       alert("Failed to export SVG");
     }
@@ -719,74 +777,245 @@ function EditorContent() {
         </Drawer>
       )}
 
-      {/* PNG Export Resolution Dialog */}
-      <Dialog open={pngDialogOpen} onClose={() => setPngDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Export PNG</DialogTitle>
-        <DialogContent>
-          <FormControl component="fieldset" sx={{ mt: 2, width: "100%" }}>
-            <FormLabel component="legend" sx={{ mb: 2, fontWeight: 600 }}>
-              Select Resolution Quality
-            </FormLabel>
-            <RadioGroup
-              value={pngResolution.toString()}
-              onChange={(e) => setPngResolution(Number(e.target.value))}
-            >
-              <FormControlLabel
-                value="1"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1" fontWeight={500}>1x - Standard</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Normal resolution (smallest file size)
-                    </Typography>
-                  </Box>
+      {/* Export Dialog */}
+      <Dialog
+        open={pngDialogOpen}
+        onClose={() => setPngDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            height: '80vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontWeight: 600
+        }}>
+          Export diagram
+          <IconButton onClick={() => setPngDialogOpen(false)} size="small">
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0, display: 'flex', height: 'calc(100% - 120px)' }}>
+          {/* Left Panel - Options */}
+          <Box sx={{
+            width: { xs: '100%', md: '400px' },
+            p: 3,
+            borderRight: { xs: 'none', md: '1px solid #e5e7eb' },
+            overflowY: 'auto'
+          }}>
+            {/* Export Format */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                Export format
+              </Typography>
+              <RadioGroup value="png">
+                <Box sx={{
+                  border: '2px solid',
+                  borderColor: 'primary.main',
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 1.5,
+                  bgcolor: 'primary.50'
+                }}>
+                  <FormControlLabel
+                    value="png"
+                    control={<Radio />}
+                    label={
+                      <Box>
+                        <Typography variant="body1" fontWeight={600}>PNG</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          High quality raster image
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+                <Box sx={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 1.5
+                }}>
+                  <FormControlLabel
+                    value="svg"
+                    control={<Radio disabled />}
+                    label={
+                      <Box>
+                        <Typography variant="body1" fontWeight={600}>SVG</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Scalable vector graphics
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </Box>
+              </RadioGroup>
+            </Box>
+
+            {/* Resolution */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                Resolution
+              </Typography>
+              <RadioGroup
+                value={pngResolution.toString()}
+                onChange={(e) => setPngResolution(Number(e.target.value))}
+              >
+                {[
+                  { value: '1', label: '1x - Standard', desc: 'Smallest file size' },
+                  { value: '2', label: '2x - High Quality', desc: 'Recommended' },
+                  { value: '3', label: '3x - Very High', desc: 'For presentations' },
+                  { value: '4', label: '4x - Ultra', desc: 'Maximum quality' },
+                ].map((option) => (
+                  <FormControlLabel
+                    key={option.value}
+                    value={option.value}
+                    control={<Radio />}
+                    label={
+                      <Box>
+                        <Typography variant="body2" fontWeight={500}>{option.label}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.desc}
+                        </Typography>
+                      </Box>
+                    }
+                    sx={{ mb: 1 }}
+                  />
+                ))}
+              </RadioGroup>
+            </Box>
+
+            {/* Background Color */}
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                Background color
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton
+                  onClick={() => setPngBackground('white')}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    border: '2px solid',
+                    borderColor: pngBackground === 'white' ? 'primary.main' : '#e5e7eb',
+                    borderRadius: 2,
+                    bgcolor: 'white',
+                    '&:hover': { bgcolor: '#f5f5f5' }
+                  }}
+                />
+                <IconButton
+                  onClick={() => setPngBackground('transparent')}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    border: '2px solid',
+                    borderColor: pngBackground === 'transparent' ? 'primary.main' : '#e5e7eb',
+                    borderRadius: 2,
+                    bgcolor: 'white',
+                    backgroundImage: 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%)',
+                    backgroundSize: '10px 10px',
+                    backgroundPosition: '0 0, 5px 5px',
+                    '&:hover': { opacity: 0.8 }
+                  }}
+                />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Right Panel - Preview (hidden on mobile) */}
+          <Box sx={{
+            flex: 1,
+            p: 3,
+            display: { xs: 'none', md: 'flex' },
+            flexDirection: 'column'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Preview
+              </Typography>
+              {pngBackground === 'transparent' && (
+                <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  Note: Export will have transparent background
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{
+              flex: 1,
+              border: '1px solid #e5e7eb',
+              borderRadius: 2,
+              p: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...(pngBackground === 'transparent'
+                ? {
+                  // Checkered pattern for transparent background
+                  background: `
+                      linear-gradient(45deg, #ccc 25%, transparent 25%),
+                      linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                      linear-gradient(45deg, transparent 75%, #ccc 75%),
+                      linear-gradient(-45deg, transparent 75%, #ccc 75%)
+                    `,
+                  backgroundSize: '20px 20px',
+                  backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+                  bgcolor: '#fff'
                 }
-              />
-              <FormControlLabel
-                value="2"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1" fontWeight={500}>2x - High Quality</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Recommended for most uses (2x pixels)
-                    </Typography>
-                  </Box>
+                : {
+                  // Solid white background
+                  bgcolor: 'white',
+                  backgroundImage: 'none'
                 }
-              />
-              <FormControlLabel
-                value="3"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1" fontWeight={500}>3x - Very High Quality</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Great for presentations (3x pixels)
-                    </Typography>
-                  </Box>
-                }
-              />
-              <FormControlLabel
-                value="4"
-                control={<Radio />}
-                label={
-                  <Box>
-                    <Typography variant="body1" fontWeight={500}>4x - Ultra Quality</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Maximum quality for print (4x pixels, large file)
-                    </Typography>
-                  </Box>
-                }
-              />
-            </RadioGroup>
-          </FormControl>
+              ),
+              overflow: 'auto'
+            }}>
+              {previewSvg ? (
+                <Box
+                  dangerouslySetInnerHTML={{ __html: previewSvg }}
+                  sx={{
+                    '& svg': {
+                      maxWidth: '100%',
+                      height: 'auto',
+                      display: 'block'
+                    }
+                  }}
+                />
+              ) : (
+                <MermaidRenderer
+                  code={debouncedCode}
+                  onError={() => { }}
+                  onSuccess={() => { }}
+                  disableInteractions={true}
+                />
+              )}
+            </Box>
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setPngDialogOpen(false)} color="inherit">
+
+        <DialogActions sx={{
+          px: 3,
+          py: 2,
+          borderTop: '1px solid #e5e7eb',
+          gap: 1
+        }}>
+          <Button
+            onClick={() => setPngDialogOpen(false)}
+            variant="outlined"
+            size="large"
+          >
             Cancel
           </Button>
-          <Button onClick={handleExportPNG} variant="contained" color="primary">
+          <Button
+            onClick={handleExportPNG}
+            variant="contained"
+            size="large"
+          >
             Export
           </Button>
         </DialogActions>
