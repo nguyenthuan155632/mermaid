@@ -32,6 +32,7 @@ import {
   AutoFixHigh,
   Menu as MenuIcon,
   LibraryBooks,
+  Image as ImageIcon,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
@@ -273,26 +274,33 @@ function EditorContent() {
             sx={{
               width: { xs: "100%", md: "auto" },
               mb: isMobile ? 1 : 0,
-              gap: isMobile ? 1 : 0,
+              gap: isMobile ? 0 : 0,
             }}
           >
-            <Button
-              variant="text"
-              startIcon={<LibraryBooks />}
-              onClick={() => router.push("/diagrams")}
-            >
-              My Diagrams
-            </Button>
             {isMobile ? (
               <>
-                <Button variant="outlined" onClick={() => setPngDialogOpen(true)} sx={{ flexGrow: 1 }}>
-                  Export PNG
-                </Button>
-                <Button variant="outlined" onClick={handleExportSVG} sx={{ flexGrow: 1 }}>
-                  Export SVG
-                </Button>
+                <IconButton onClick={() => router.push("/diagrams")} title="My Diagrams" color="primary" size="small">
+                  <LibraryBooks fontSize="small" />
+                </IconButton>
+                <IconButton onClick={() => setPngDialogOpen(true)} title="Export PNG" color="primary" size="small">
+                  <ImageIcon fontSize="small" />
+                </IconButton>
+                <IconButton onClick={handleExportSVG} title="Export SVG" color="primary" size="small">
+                  <GetApp fontSize="small" />
+                </IconButton>
               </>
             ) : (
+              <>
+                <Button
+                  variant="text"
+                  startIcon={<LibraryBooks />}
+                  onClick={() => router.push("/diagrams")}
+                >
+                  My Diagrams
+                </Button>
+              </>
+            )}
+            {!isMobile && (
               <>
                 <Button
                   variant="outlined"
