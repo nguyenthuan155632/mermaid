@@ -40,8 +40,6 @@ import {
   Add,
   Home,
   Logout,
-  GridView,
-  ViewList,
   Search as SearchIcon,
   ContentCopy,
   Visibility,
@@ -55,7 +53,6 @@ import { Diagram } from "@/types";
 import { useDebounce } from "@/hooks/useDebounce";
 
 type SortKey = "title" | "createdAt" | "updatedAt";
-type ViewMode = "grid" | "list";
 type VisibilityFilter = "all" | "public" | "private";
 
 interface PaginatedResponse {
@@ -105,7 +102,6 @@ export default function DiagramsPage() {
   const { data: session, status } = useSession();
 
   const [diagrams, setDiagrams] = useState<Diagram[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("updatedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -356,23 +352,68 @@ export default function DiagramsPage() {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: (theme) => theme.palette.grey[50] }}>
-      <AppBar position="sticky" elevation={0} color="default" sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            Diagram Library
-          </Typography>
-          <IconButton color="inherit" onClick={() => router.push("/")}>
-            <Home />
-          </IconButton>
-          <Button color="inherit" onClick={() => router.push("/editor")}>
-            Editor
-          </Button>
-          <Button color="inherit" startIcon={<Add />} onClick={() => router.push("/editor?fresh=1")}>
-            New Diagram
-          </Button>
-          <Button color="inherit" onClick={() => signOut()}>
-            Logout
-          </Button>
+      <AppBar position="sticky" elevation={0} sx={{ bgcolor: "white", borderBottom: "1px solid #e5e7eb" }}>
+        <Toolbar sx={{ minHeight: { xs: 56, md: 64 }, gap: { xs: 0.5, md: 1 }, px: { xs: 1, md: 2 } }}>
+          <Box sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexGrow: 1,
+            minWidth: 0
+          }}>
+            <Box
+              component="svg"
+              sx={{ width: { xs: 28, md: 32 }, height: { xs: 28, md: 32 }, flexShrink: 0 }}
+              viewBox="0 0 100 100"
+            >
+              <rect fill="#FF2E88" width="100" height="100" rx="10" />
+              <text
+                x="50"
+                y="70"
+                fontSize="60"
+                fill="white"
+                textAnchor="middle"
+                fontWeight="bold"
+              >
+                M
+              </text>
+            </Box>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: "text.primary",
+                fontSize: { xs: "0.95rem", md: "1.25rem" },
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}
+            >
+              Mermaid Live Editor
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={{ xs: 0.5, md: 1 }} alignItems="center">
+            <IconButton onClick={() => router.push("/")} size="small" title="Home" color="default">
+              <Home />
+            </IconButton>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Add />}
+              onClick={() => router.push("/editor?fresh=1")}
+              size="small"
+            >
+              New
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => signOut()}
+              size="small"
+            >
+              Logout
+            </Button>
+          </Stack>
         </Toolbar>
       </AppBar>
 
@@ -380,40 +421,26 @@ export default function DiagramsPage() {
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Stack spacing={3}>
-          <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, alignItems: { xs: "flex-start", sm: "center" }, justifyContent: "space-between", gap: 2 }}>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                Diagrams
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Browse, search, and manage everything you have created.
-              </Typography>
-            </Box>
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(_, value) => value && setViewMode(value)}
-              size="small"
-            >
-              <ToggleButton value="grid" aria-label="grid view">
-                <GridView fontSize="small" />
-              </ToggleButton>
-              <ToggleButton value="list" aria-label="list view">
-                <ViewList fontSize="small" />
-              </ToggleButton>
-            </ToggleButtonGroup>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              Diagrams
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Browse, search, and manage everything you have created.
+            </Typography>
           </Box>
 
-          <Card>
-            <CardContent>
-              <Stack spacing={2}>
+          <Card elevation={0} sx={{ border: "1px solid #e5e7eb" }}>
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+              <Stack spacing={2.5}>
+                {/* Search and Sort Row */}
                 <Stack
-                  direction={{ xs: "column", md: "row" }}
+                  direction={{ xs: "column", sm: "row" }}
                   spacing={2}
-                  alignItems={{ xs: "stretch", md: "center" }}
+                  alignItems={{ xs: "stretch", sm: "center" }}
                 >
                   <TextField
-                    label="Search diagrams"
+                    placeholder="Search diagrams"
                     value={search}
                     onChange={(event) => {
                       setSearch(event.target.value);
@@ -428,13 +455,14 @@ export default function DiagramsPage() {
                         </InputAdornment>
                       ),
                     }}
+                    sx={{ maxWidth: { sm: 400 } }}
                   />
                   <TextField
                     select
                     size="small"
                     label="Sort by"
                     value={sortBy}
-                    sx={{ minWidth: 160 }}
+                    sx={{ minWidth: { xs: "100%", sm: 160 } }}
                     onChange={(event) => {
                       setSortBy(event.target.value as SortKey);
                       setPage(1);
@@ -452,21 +480,24 @@ export default function DiagramsPage() {
                     onChange={(_, value) => {
                       if (!value) return;
                       setSortDir(value);
+                      setPage(1);
                     }}
                     size="small"
                     aria-label="sort direction"
+                    sx={{ width: { xs: "100%", sm: "auto" } }}
                   >
-                    <ToggleButton value="asc">Asc</ToggleButton>
-                    <ToggleButton value="desc">Desc</ToggleButton>
+                    <ToggleButton value="asc" sx={{ flex: { xs: 1, sm: "initial" } }}>ASC</ToggleButton>
+                    <ToggleButton value="desc" sx={{ flex: { xs: 1, sm: "initial" } }}>DESC</ToggleButton>
                   </ToggleButtonGroup>
                 </Stack>
 
                 <Divider />
 
+                {/* Filter Row */}
                 <Stack
-                  direction={{ xs: "column", lg: "row" }}
+                  direction={{ xs: "column", md: "row" }}
                   spacing={2}
-                  alignItems={{ xs: "stretch", lg: "center" }}
+                  alignItems={{ xs: "stretch", md: "center" }}
                 >
                   <ToggleButtonGroup
                     value={visibility}
@@ -477,10 +508,11 @@ export default function DiagramsPage() {
                       setPage(1);
                     }}
                     size="small"
+                    sx={{ width: { xs: "100%", md: "auto" } }}
                   >
-                    <ToggleButton value="all">All</ToggleButton>
-                    <ToggleButton value="private">Private</ToggleButton>
-                    <ToggleButton value="public">Public</ToggleButton>
+                    <ToggleButton value="all" sx={{ flex: { xs: 1, md: "initial" } }}>ALL</ToggleButton>
+                    <ToggleButton value="private" sx={{ flex: { xs: 1, md: "initial" } }}>PRIVATE</ToggleButton>
+                    <ToggleButton value="public" sx={{ flex: { xs: 1, md: "initial" } }}>PUBLIC</ToggleButton>
                   </ToggleButtonGroup>
                   <TextField
                     label="Created from"
@@ -492,6 +524,7 @@ export default function DiagramsPage() {
                       setPage(1);
                     }}
                     InputLabelProps={{ shrink: true }}
+                    sx={{ flex: { xs: 1, md: "initial" }, minWidth: { md: 160 } }}
                   />
                   <TextField
                     label="Created to"
@@ -503,12 +536,16 @@ export default function DiagramsPage() {
                       setPage(1);
                     }}
                     InputLabelProps={{ shrink: true }}
+                    sx={{ flex: { xs: 1, md: "initial" }, minWidth: { md: 160 } }}
                   />
-                  <Box sx={{ flexGrow: 1 }} />
+                  <Box sx={{ flexGrow: 1, display: { xs: "none", md: "block" } }} />
                   <Button
                     variant="text"
+                    color="primary"
                     startIcon={<Refresh />}
                     onClick={resetFilters}
+                    size="small"
+                    sx={{ width: { xs: "100%", md: "auto" } }}
                   >
                     Reset filters
                   </Button>
@@ -537,7 +574,7 @@ export default function DiagramsPage() {
                 </Button>
               </CardContent>
             </Card>
-          ) : viewMode === "grid" ? (
+          ) : (
             <Box
               sx={{
                 display: "grid",
@@ -638,103 +675,6 @@ export default function DiagramsPage() {
                 </Card>
               ))}
             </Box>
-          ) : (
-            <Stack spacing={3}>
-              {diagrams.map((diagram) => (
-                <Card key={diagram.id}>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                    <Box sx={{ flexBasis: { md: "35%" }, flexShrink: 0, borderRight: { md: 1 }, borderBottom: { xs: 1, md: 0 }, borderColor: "divider", p: 1, bgcolor: "grey.100" }}>
-                      <Box sx={{ height: 240 }}>
-                        <MermaidRenderer code={diagram.code} disableInteractions initialZoom={0.5} />
-                      </Box>
-                    </Box>
-                    <Box sx={{ flex: 1, py: 2, pr: 2 }}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                          {diagram.title}
-                        </Typography>
-                        <Chip
-                          size="small"
-                          color={diagram.isPublic ? "success" : "default"}
-                          label={diagram.isPublic ? "Public" : "Private"}
-                        />
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
-                        {diagram.description || "No description provided."}
-                      </Typography>
-                      <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Created: <strong>{formatDate(diagram.createdAt)}</strong>
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Updated: <strong>{formatRelativeTime(diagram.updatedAt)}</strong>
-                        </Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
-                        <Tooltip title="View in editor">
-                          <span>
-                            <IconButton
-                              onClick={() => handleView(diagram.id)}
-                              aria-label="View diagram"
-                              size="small"
-                            >
-                              <Visibility fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Edit details">
-                          <span>
-                            <IconButton
-                              onClick={() => handleEdit(diagram)}
-                              aria-label="Edit diagram"
-                              size="small"
-                            >
-                              <Edit fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title={duplicateTarget === diagram.id ? "Duplicating..." : "Duplicate"}>
-                          <span>
-                            <IconButton
-                              onClick={() => handleDuplicate(diagram.id)}
-                              aria-label="Duplicate diagram"
-                              size="small"
-                              disabled={duplicateTarget === diagram.id}
-                            >
-                              <ContentCopy fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title={shareTarget === diagram.id ? "Sharing..." : "Copy share link"}>
-                          <span>
-                            <IconButton
-                              onClick={() => handleShare(diagram.id)}
-                              aria-label="Share diagram"
-                              size="small"
-                              disabled={shareTarget === diagram.id}
-                            >
-                              <Share fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Delete diagram">
-                          <span>
-                            <IconButton
-                              onClick={() => setDeleteDialog({ open: true, diagram })}
-                              aria-label="Delete diagram"
-                              color="error"
-                              size="small"
-                            >
-                              <Delete fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </Stack>
-                    </Box>
-                  </Stack>
-                </Card>
-              ))}
-            </Stack>
           )}
 
           {totalPages > 1 && (
