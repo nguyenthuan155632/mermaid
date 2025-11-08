@@ -42,6 +42,11 @@ export default function MermaidRenderer({
   const lastCalculatedSvg = useRef<string>("");
   const isCalculatingRef = useRef(false);
   const updateUrlTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Touch gesture state
+  const isPinchingRef = useRef(false);
+  const pinchStartDistanceRef = useRef(0);
+  const pinchStartZoomRef = useRef(1);
+  const pinchLastCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Helper to get zoom from URL (used during initialization)
   const getInitialZoomFromUrl = (): number | null => {
@@ -92,35 +97,35 @@ export default function MermaidRenderer({
     (newZoom: number, newPan: { x: number; y: number }) => {
       if (disableInteractions) return;
 
-    // Validate inputs before updating URL
-    if (isNaN(newZoom) || newZoom < 0.3 || newZoom > 10) return;
-    if (isNaN(newPan.x) || isNaN(newPan.y)) return;
+      // Validate inputs before updating URL
+      if (isNaN(newZoom) || newZoom < 0.3 || newZoom > 10) return;
+      if (isNaN(newPan.x) || isNaN(newPan.y)) return;
 
-    // Debounce URL updates to avoid excessive history entries
-    if (updateUrlTimeoutRef.current) {
-      clearTimeout(updateUrlTimeoutRef.current);
-    }
-
-    updateUrlTimeoutRef.current = setTimeout(() => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-
-        // Preserve the 'id' parameter if it exists
-        const currentId = params.get("id");
-
-        // Round zoom to 2 decimal places for cleaner URLs
-        params.set("zoom", newZoom.toFixed(2));
-
-        // Round pan values to integers for cleaner URLs
-        params.set("pan", `${Math.round(newPan.x)}_${Math.round(newPan.y)}`);
-
-        // Use replaceState to avoid creating too many history entries
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        window.history.replaceState({}, "", newUrl);
-      } catch (error) {
-        // Silently fail if URL update fails (e.g., in environments without history API)
-        console.warn("Failed to update URL parameters:", error);
+      // Debounce URL updates to avoid excessive history entries
+      if (updateUrlTimeoutRef.current) {
+        clearTimeout(updateUrlTimeoutRef.current);
       }
+
+      updateUrlTimeoutRef.current = setTimeout(() => {
+        try {
+          const params = new URLSearchParams(window.location.search);
+
+          // Preserve the 'id' parameter if it exists
+          const currentId = params.get("id");
+
+          // Round zoom to 2 decimal places for cleaner URLs
+          params.set("zoom", newZoom.toFixed(2));
+
+          // Round pan values to integers for cleaner URLs
+          params.set("pan", `${Math.round(newPan.x)}_${Math.round(newPan.y)}`);
+
+          // Use replaceState to avoid creating too many history entries
+          const newUrl = `${window.location.pathname}?${params.toString()}`;
+          window.history.replaceState({}, "", newUrl);
+        } catch (error) {
+          // Silently fail if URL update fails (e.g., in environments without history API)
+          console.warn("Failed to update URL parameters:", error);
+        }
       }, 500); // 500ms debounce
     },
     [disableInteractions]
@@ -184,6 +189,83 @@ export default function MermaidRenderer({
       }
     };
   }, [disableInteractions, isFullscreen, svgContent]);
+
+  // Touch gestures: pinch-to-zoom and one-finger pan (mobile devices)
+  useEffect(() => {
+    if (disableInteractions) return;
+
+    const container = diagramContainerRef.current;
+    const fullscreenContainer = fullscreenContainerRef.current;
+
+    const getTouchDistance = (e: TouchEvent) => {
+      if (e.touches.length < 2) return 0;
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+    };
+
+    const touchStart = (e: TouchEvent) => {
+      const touches = e.touches;
+      if (touches.length === 2) {
+        isPinchingRef.current = true;
+        pinchStartDistanceRef.current = getTouchDistance(e);
+        pinchStartZoomRef.current = zoom;
+        e.preventDefault();
+        e.stopPropagation();
+      } else if (touches.length === 1 && zoom > 1) {
+        const t = touches[0];
+        setIsPanning(true);
+        setPanStart({ x: t.clientX - pan.x, y: t.clientY - pan.y });
+      }
+    };
+
+    const touchMove = (e: TouchEvent) => {
+      const touches = e.touches;
+      if (touches.length === 2 && isPinchingRef.current) {
+        const distance = getTouchDistance(e);
+        if (pinchStartDistanceRef.current > 0) {
+          const scale = distance / pinchStartDistanceRef.current;
+          const nextZoom = Math.min(Math.max(pinchStartZoomRef.current * scale, 0.3), 10);
+          setZoom(nextZoom);
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      } else if (touches.length === 1 && isPanning && zoom > 1) {
+        const t = touches[0];
+        setPan({ x: t.clientX - panStart.x, y: t.clientY - panStart.y });
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const touchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
+        isPinchingRef.current = false;
+      }
+      if (e.touches.length === 0) {
+        setIsPanning(false);
+      }
+    };
+
+    const opts: AddEventListenerOptions = { passive: false };
+
+    const targets = [container, fullscreenContainer].filter(Boolean) as HTMLDivElement[];
+    targets.forEach((el) => {
+      el.addEventListener("touchstart", touchStart, opts);
+      el.addEventListener("touchmove", touchMove, opts);
+      el.addEventListener("touchend", touchEnd, opts);
+      el.addEventListener("touchcancel", touchEnd, opts);
+    });
+
+    return () => {
+      targets.forEach((el) => {
+        el.removeEventListener("touchstart", touchStart);
+        el.removeEventListener("touchmove", touchMove);
+        el.removeEventListener("touchend", touchEnd);
+        el.removeEventListener("touchcancel", touchEnd);
+      });
+    };
+  }, [disableInteractions, isFullscreen, svgContent, zoom, pan, panStart, isPanning]);
 
   useEffect(() => {
     if (!code.trim()) {
@@ -527,6 +609,7 @@ export default function MermaidRenderer({
                   ? "grab"
                   : "default",
             userSelect: disableInteractions ? "auto" : "none",
+            touchAction: disableInteractions ? "auto" : "none",
           }}
         >
           <Box
@@ -622,6 +705,7 @@ export default function MermaidRenderer({
                         ? "grab"
                         : "default",
                   userSelect: disableInteractions ? "auto" : "none",
+                  touchAction: disableInteractions ? "auto" : "none",
                   backgroundImage: "radial-gradient(circle, #f0f0f0 2px, transparent 2px)",
                   backgroundSize: "30px 30px",
                 }}
