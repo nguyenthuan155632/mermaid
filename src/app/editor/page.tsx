@@ -10,8 +10,6 @@ import {
   Toolbar,
   Typography,
   IconButton,
-  Tab,
-  Tabs,
   Divider,
   Chip,
   Dialog,
@@ -30,6 +28,7 @@ import {
   Share,
   AutoFixHigh,
   Menu as MenuIcon,
+  LibraryBooks,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
@@ -51,40 +50,60 @@ function EditorContent() {
   const [fixing, setFixing] = useState(false);
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState(0);
   const [pngDialogOpen, setPngDialogOpen] = useState(false);
   const [pngResolution, setPngResolution] = useState<number>(2);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const debouncedCode = useDebounce(code, 300);
 
-  useEffect(() => {
-    const id = searchParams.get("id");
+  const diagramIdParam = searchParams.get("id");
+  const freshParam = searchParams.get("fresh");
 
-    if (id) {
-      fetch(`/api/diagrams/${id}`)
+  useEffect(() => {
+    const loadDraftFromStorage = () => {
+      try {
+        const savedCode = localStorage.getItem("mermaid-draft");
+        if (savedCode) {
+          setCode(savedCode);
+        } else {
+          setCode("");
+        }
+      } catch {
+        setCode("");
+      }
+    };
+
+    if (diagramIdParam) {
+      fetch(`/api/diagrams/${diagramIdParam}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.id) {
             setDiagramId(data.id);
             setTitle(data.title);
             setCode(data.code);
+          } else {
+            loadDraftFromStorage();
           }
         })
-        .catch(() => {
-          const savedCode = localStorage.getItem("mermaid-draft");
-          if (savedCode) {
-            setCode(savedCode);
-          }
-        });
-    } else {
-      const savedCode = localStorage.getItem("mermaid-draft");
-      if (savedCode) {
-        setCode(savedCode);
-      }
+        .catch(loadDraftFromStorage);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get("id")]); // Only re-run when the 'id' parameter changes, not zoom/pan
+
+    if (freshParam === "1") {
+      try {
+        localStorage.removeItem("mermaid-draft");
+      } catch {
+        // ignore storage errors
+      }
+      setDiagramId(null);
+      setTitle("");
+      setCode("");
+      router.replace("/editor");
+      return;
+    }
+
+    loadDraftFromStorage();
+  }, [diagramIdParam, freshParam, router]);
 
   useEffect(() => {
     localStorage.setItem("mermaid-draft", code);
@@ -234,6 +253,13 @@ function EditorContent() {
           </Box>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <Button
+              variant="text"
+              startIcon={<LibraryBooks />}
+              onClick={() => router.push("/diagrams")}
+            >
+              My Diagrams
+            </Button>
+            <Button
               variant="outlined"
               startIcon={<Share />}
               onClick={handleShare}
@@ -311,89 +337,74 @@ function EditorContent() {
               transition: "width 0.3s ease",
             }}
           >
-            <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)} sx={{ borderBottom: 1, borderColor: "divider" }}>
-              <Tab label="Code" />
-              {/* <Tab label="Config" /> */}
-            </Tabs>
-
-            {activeTab === 0 && (
-              <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                <Box sx={{ p: 2, borderBottom: "1px solid #e5e7eb" }}>
-                  <TextField
-                    placeholder="Diagram Title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                  />
-                </Box>
-                <Box sx={{ flex: 1, overflow: "hidden" }}>
-                  <CodeEditor value={code} onChange={setCode} />
-                </Box>
-                <Divider />
-                <Box sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                    Sample Diagrams
-                  </Typography>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    onClick={() => setSamplesOpen(true)}
-                    size="small"
-                  >
-                    Browse Samples
-                  </Button>
-                </Box>
-                <Divider />
-                <Box sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                    Actions
-                  </Typography>
-                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<GetApp />}
-                      onClick={() => setPngDialogOpen(true)}
-                      size="small"
-                      fullWidth
-                    >
-                      Export PNG
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<GetApp />}
-                      onClick={handleExportSVG}
-                      size="small"
-                      fullWidth
-                    >
-                      Export SVG
-                    </Button>
-                    {hasError && (
-                      <Button
-                        variant="outlined"
-                        color="warning"
-                        startIcon={<AutoFixHigh />}
-                        onClick={handleFixWithAI}
-                        disabled={fixing}
-                        size="small"
-                        fullWidth
-                      >
-                        {fixing ? "Fixing..." : "Fix with AI"}
-                      </Button>
-                    )}
-                  </Box>
-                </Box>
+            <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              <Box sx={{ p: 2, borderBottom: "1px solid #e5e7eb" }}>
+                <TextField
+                  placeholder="Diagram Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  fullWidth
+                  size="small"
+                  variant="outlined"
+                />
               </Box>
-            )}
-
-            {/* {activeTab === 1 && (
+              <Box sx={{ flex: 1, overflow: "hidden" }}>
+                <CodeEditor value={code} onChange={setCode} />
+              </Box>
+              <Divider />
               <Box sx={{ p: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Configuration options coming soon...
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                  Sample Diagrams
                 </Typography>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => setSamplesOpen(true)}
+                  size="small"
+                >
+                  Browse Samples
+                </Button>
               </Box>
-            )} */}
+              <Divider />
+              <Box sx={{ p: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                  Actions
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<GetApp />}
+                    onClick={() => setPngDialogOpen(true)}
+                    size="small"
+                    fullWidth
+                  >
+                    Export PNG
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<GetApp />}
+                    onClick={handleExportSVG}
+                    size="small"
+                    fullWidth
+                  >
+                    Export SVG
+                  </Button>
+                  {hasError && (
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      startIcon={<AutoFixHigh />}
+                      onClick={handleFixWithAI}
+                      disabled={fixing}
+                      size="small"
+                      fullWidth
+                    >
+                      {fixing ? "Fixing..." : "Fix with AI"}
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </Box>
           </Box>
         )}
 
@@ -511,4 +522,3 @@ export default function EditorPage() {
     </Suspense>
   );
 }
-

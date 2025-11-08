@@ -1,129 +1,172 @@
 import { db } from "@/db";
 import { sampleDiagrams } from "@/db/schema";
+import { SAMPLE_DATA, SampleKey } from "./sample_data";
 
-export const sampleDiagramsData = [
+type SampleMeta = {
+  key: SampleKey;
+  title: string;
+  description: string;
+  category: string;
+  order: number;
+};
+
+const SAMPLE_METADATA: SampleMeta[] = [
   {
-    title: "Basic Flowchart",
-    code: `flowchart TD
-    A[Start] --> B{Is it working?}
-    B -->|Yes| C[Great!]
-    B -->|No| D[Debug]
-    D --> B
-    C --> E[End]`,
-    description: "A simple flowchart example",
+    key: "flowchart",
+    title: "Holiday Shopping Flow",
+    description: "Decision tree for choosing the next purchase.",
     category: "flowchart",
     order: 1,
   },
   {
-    title: "Sequence Diagram",
-    code: `sequenceDiagram
-    participant A as Alice
-    participant B as Bob
-    A->>B: Hello Bob, how are you?
-    B-->>A: Great!
-    A->>B: See you later!`,
-    description: "A basic sequence diagram",
-    category: "sequence",
+    key: "class",
+    title: "Animal Class Diagram",
+    description: "Simple inheritance example with attributes and methods.",
+    category: "class",
     order: 2,
   },
   {
-    title: "Class Diagram",
-    code: `classDiagram
-    class Animal {
-        +String name
-        +int age
-        +eat()
-        +sleep()
-    }
-    class Dog {
-        +String breed
-        +bark()
-    }
-    class Cat {
-        +int lives
-        +meow()
-    }
-    Animal <|-- Dog
-    Animal <|-- Cat`,
-    description: "Object-oriented class diagram",
-    category: "class",
+    key: "sequence",
+    title: "Greeting Sequence",
+    description: "Message exchange between two participants.",
+    category: "sequence",
     order: 3,
   },
   {
-    title: "State Diagram",
-    code: `stateDiagram-v2
-    [*] --> Still
-    Still --> Moving
-    Moving --> Still
-    Moving --> Crash
-    Crash --> [*]`,
-    description: "State machine diagram",
-    category: "state",
+    key: "entityRelationship",
+    title: "Orders ER Model",
+    description: "Customers, orders, products, and items relationships.",
+    category: "er",
     order: 4,
   },
   {
-    title: "Entity Relationship",
-    code: `erDiagram
-    CUSTOMER ||--o{ ORDER : places
-    ORDER ||--|{ LINE-ITEM : contains
-    PRODUCT ||--o{ LINE-ITEM : "ordered in"
-    CUSTOMER {
-        string name
-        string email
-    }
-    ORDER {
-        int orderNumber
-        date orderDate
-    }`,
-    description: "Database ER diagram",
-    category: "er",
+    key: "state",
+    title: "Movement State Machine",
+    description: "Idle, moving, and crash states with transitions.",
+    category: "state",
     order: 5,
   },
   {
-    title: "Gantt Chart",
-    code: `gantt
-    title Project Timeline
-    dateFormat YYYY-MM-DD
-    section Phase 1
-    Task 1 :a1, 2024-01-01, 30d
-    Task 2 :a2, after a1, 20d
-    section Phase 2
-    Task 3 :a3, 2024-02-01, 30d
-    Task 4 :a4, after a3, 25d`,
-    description: "Project timeline Gantt chart",
-    category: "gantt",
+    key: "mindMap",
+    title: "Mindmap Template",
+    description: "Mindmap showing origins, research, and tools.",
+    category: "mindmap",
     order: 6,
   },
   {
-    title: "Pie Chart",
-    code: `pie title Sales Distribution
-    "Product A" : 42.1
-    "Product B" : 30.2
-    "Product C" : 15.3
-    "Product D" : 12.4`,
-    description: "Data visualization pie chart",
-    category: "pie",
+    key: "architecture",
+    title: "API Cloud Architecture",
+    description: "Cloud services grouped by clients, platform, and data.",
+    category: "architecture",
     order: 7,
   },
   {
-    title: "User Journey",
-    code: `journey
-    title User Journey
-    section Landing
-      Visit website: 5: User
-      Browse products: 4: User
-    section Purchase
-      Add to cart: 3: User
-      Checkout: 4: User
-      Payment: 5: User
-    section Post-Purchase
-      Receive confirmation: 5: User
-      Track order: 4: User`,
-    description: "User experience journey map",
-    category: "user-journey",
+    key: "c4",
+    title: "Banking Context (C4)",
+    description: "C4 context diagram covering boundaries and systems.",
+    category: "c4",
     order: 8,
   },
+  {
+    key: "gantt",
+    title: "Sample Gantt Chart",
+    description: "Tasks with durations and dependencies.",
+    category: "gantt",
+    order: 9,
+  },
+  {
+    key: "git",
+    title: "Git Workflow",
+    description: "Commits, branches, and merges for version control.",
+    category: "git",
+    order: 10,
+  },
+  {
+    key: "kanban",
+    title: "Kanban Board",
+    description: "Tickets across backlog, in-progress, and done.",
+    category: "kanban",
+    order: 11,
+  },
+  {
+    key: "package",
+    title: "TCP Packet Layout",
+    description: "Visualize header bits in a TCP packet.",
+    category: "packet",
+    order: 12,
+  },
+  {
+    key: "pie",
+    title: "Adoption Pie Chart",
+    description: "Pet adoption counts grouped by type.",
+    category: "pie",
+    order: 13,
+  },
+  {
+    key: "quadrant",
+    title: "Campaign Quadrant",
+    description: "Compare reach and engagement of campaigns.",
+    category: "quadrant",
+    order: 14,
+  },
+  {
+    key: "radar",
+    title: "Student Grades Radar",
+    description: "Radar chart showing scores per subject.",
+    category: "radar",
+    order: 15,
+  },
+  {
+    key: "requirement",
+    title: "Requirement Diagram",
+    description: "Trace requirements to satisfying elements.",
+    category: "requirement",
+    order: 16,
+  },
+  {
+    key: "sankey",
+    title: "Energy Flow Sankey",
+    description: "Extensive flow values between energy sources and uses.",
+    category: "sankey",
+    order: 17,
+  },
+  {
+    key: "timeline",
+    title: "Social Media Timeline",
+    description: "Chronological introduction of major platforms.",
+    category: "timeline",
+    order: 18,
+  },
+  {
+    key: "treemap",
+    title: "Treemap Example",
+    description: "Nested sections sized by numeric values.",
+    category: "treemap",
+    order: 19,
+  },
+  {
+    key: "userJourney",
+    title: "Working Day Journey",
+    description: "Experience steps throughout a day.",
+    category: "user-journey",
+    order: 20,
+  },
+  {
+    key: "xy",
+    title: "Sales Revenue Chart",
+    description: "XY beta chart depicting revenue over months.",
+    category: "xy",
+    order: 21,
+  },
 ];
+
+export const sampleDiagramsData = SAMPLE_METADATA.map((meta) => ({
+  title: meta.title,
+  description: meta.description,
+  category: meta.category,
+  order: meta.order,
+  code: SAMPLE_DATA[meta.key].code,
+}));
 
 export async function seedSampleDiagrams() {
   try {
@@ -132,4 +175,3 @@ export async function seedSampleDiagrams() {
     console.error("Failed to seed sample diagrams", error);
   }
 }
-

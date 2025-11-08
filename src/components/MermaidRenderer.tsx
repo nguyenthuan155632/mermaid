@@ -23,12 +23,16 @@ interface MermaidRendererProps {
   code: string;
   onError?: (error: string) => void;
   onSuccess?: () => void;
+  disableInteractions?: boolean;
+  initialZoom?: number;
 }
 
 export default function MermaidRenderer({
   code,
   onError,
   onSuccess,
+  disableInteractions = false,
+  initialZoom,
 }: MermaidRendererProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -61,24 +65,33 @@ export default function MermaidRenderer({
   };
 
   // Initialize state from URL if available, otherwise use defaults
-  const initialUrlZoom = getInitialZoomFromUrl();
-  const initialUrlPan = getInitialPanFromUrl();
-  const hasUrlParams = useRef(initialUrlZoom !== null);
+  const initialUrlZoom = disableInteractions ? null : getInitialZoomFromUrl();
+  const initialUrlPan = disableInteractions ? null : getInitialPanFromUrl();
+  const hasUrlParams = useRef(disableInteractions ? true : initialUrlZoom !== null);
 
   const [error, setError] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(initialUrlZoom ?? 1);
+  const resolvedInitialZoom =
+    typeof initialZoom === "number"
+      ? initialZoom
+      : disableInteractions
+        ? 1
+        : initialUrlZoom ?? 1;
+  const [zoom, setZoom] = useState(resolvedInitialZoom);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [svgContent, setSvgContent] = useState<string>("");
   const [pan, setPan] = useState(initialUrlPan ?? { x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [fittedZoom, setFittedZoom] = useState(initialUrlZoom ?? 1);
+  const [fittedZoom, setFittedZoom] = useState(resolvedInitialZoom);
   const [isCalculatingZoom, setIsCalculatingZoom] = useState(false);
 
   // URL parameter update utility
 
 
-  const updateUrlParams = useCallback((newZoom: number, newPan: { x: number; y: number }) => {
+  const updateUrlParams = useCallback(
+    (newZoom: number, newPan: { x: number; y: number }) => {
+      if (disableInteractions) return;
+
     // Validate inputs before updating URL
     if (isNaN(newZoom) || newZoom < 0.3 || newZoom > 10) return;
     if (isNaN(newPan.x) || isNaN(newPan.y)) return;
@@ -108,8 +121,10 @@ export default function MermaidRenderer({
         // Silently fail if URL update fails (e.g., in environments without history API)
         console.warn("Failed to update URL parameters:", error);
       }
-    }, 500); // 500ms debounce
-  }, []);
+      }, 500); // 500ms debounce
+    },
+    [disableInteractions]
+  );
 
   useEffect(() => {
     mermaid.initialize({
@@ -121,6 +136,8 @@ export default function MermaidRenderer({
 
   // Add wheel event listener with passive: false to enable preventDefault
   useEffect(() => {
+    if (disableInteractions) return;
+
     const container = diagramContainerRef.current;
     const fullscreenContainer = fullscreenContainerRef.current;
 
@@ -166,7 +183,7 @@ export default function MermaidRenderer({
         fullscreenContainer.removeEventListener("wheel", wheelHandler);
       }
     };
-  }, [isFullscreen, svgContent]);
+  }, [disableInteractions, isFullscreen, svgContent]);
 
   useEffect(() => {
     if (!code.trim()) {
@@ -181,10 +198,13 @@ export default function MermaidRenderer({
     const renderDiagram = async () => {
       try {
         setError(null);
-        // Only set calculating flag if we don't have URL params (need auto-fit)
-        if (!hasUrlParams.current) {
+        // Only set calculating flag if we don't have URL params (need auto-fit) and interactions enabled
+        if (!hasUrlParams.current && !disableInteractions) {
           setIsCalculatingZoom(true);
           isCalculatingRef.current = true;
+        } else if (disableInteractions) {
+          setIsCalculatingZoom(false);
+          isCalculatingRef.current = false;
         }
         const id = `mermaid-${Date.now()}`;
         const { svg } = await mermaid.render(id, code);
@@ -302,6 +322,8 @@ export default function MermaidRenderer({
 
   // Calculate and apply initial fit-to-viewport zoom after diagram renders
   useEffect(() => {
+    if (disableInteractions) return;
+
     // Skip if we have URL parameters - zoom is already set from URL
     if (hasUrlParams.current) {
       // Just mark as calculated and hide the loading state
@@ -345,10 +367,12 @@ export default function MermaidRenderer({
     });
 
     return () => cancelAnimationFrame(rafId);
-  }, [svgContent, error, updateUrlParams]);
+  }, [disableInteractions, svgContent, error, updateUrlParams]);
 
   // Update URL when zoom or pan changes (debounced)
   useEffect(() => {
+    if (disableInteractions) return;
+
     // Don't update URL during initial calculation
     if (isCalculatingZoom || !svgContent) return;
 
@@ -358,7 +382,7 @@ export default function MermaidRenderer({
 
     // Update URL with current zoom and pan
     updateUrlParams(zoom, pan);
-  }, [zoom, pan, isCalculatingZoom, svgContent, updateUrlParams]);
+  }, [disableInteractions, zoom, pan, isCalculatingZoom, svgContent, updateUrlParams]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -370,14 +394,17 @@ export default function MermaidRenderer({
   }, []);
 
   const handleZoomIn = () => {
+    if (disableInteractions) return;
     setZoom((prev) => Math.min(prev + 0.1, 10));
   };
 
   const handleZoomOut = () => {
+    if (disableInteractions) return;
     setZoom((prev) => Math.max(prev - 0.1, 0.3));
   };
 
   const handleResetZoom = () => {
+    if (disableInteractions) return;
     console.log("=== FIT TO SCREEN CLICKED ===");
     console.log("Current zoom:", zoom);
     console.log("Current fittedZoom:", fittedZoom);
@@ -394,6 +421,7 @@ export default function MermaidRenderer({
 
   // Handle panning
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (disableInteractions) return;
     if (zoom > 1) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -401,6 +429,7 @@ export default function MermaidRenderer({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (disableInteractions) return;
     if (isPanning && zoom > 1) {
       setPan({
         x: e.clientX - panStart.x,
@@ -410,14 +439,17 @@ export default function MermaidRenderer({
   };
 
   const handleMouseUp = () => {
+    if (disableInteractions) return;
     setIsPanning(false);
   };
 
   const handleMouseLeave = () => {
+    if (disableInteractions) return;
     setIsPanning(false);
   };
 
   const handleFullscreen = () => {
+    if (disableInteractions) return;
     setIsFullscreen(true);
   };
 
@@ -442,31 +474,33 @@ export default function MermaidRenderer({
         p: 2,
       }}
     >
-      <Box
-        sx={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          display: "flex",
-          gap: 1,
-          zIndex: 1,
-        }}
-      >
-        <IconButton onClick={handleZoomIn} size="small" title="Zoom In">
-          <ZoomIn />
-        </IconButton>
-        <IconButton onClick={handleZoomOut} size="small" title="Zoom Out">
-          <ZoomOut />
-        </IconButton>
-        <IconButton onClick={handleResetZoom} size="small" title="Fit to Screen">
-          <FitScreen />
-        </IconButton>
-        {!isFullscreen && (
-          <IconButton onClick={handleFullscreen} size="small" title="Fullscreen">
-            <Fullscreen />
+      {!disableInteractions && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            display: "flex",
+            gap: 1,
+            zIndex: 1,
+          }}
+        >
+          <IconButton onClick={handleZoomIn} size="small" title="Zoom In">
+            <ZoomIn />
           </IconButton>
-        )}
-      </Box>
+          <IconButton onClick={handleZoomOut} size="small" title="Zoom Out">
+            <ZoomOut />
+          </IconButton>
+          <IconButton onClick={handleResetZoom} size="small" title="Fit to Screen">
+            <FitScreen />
+          </IconButton>
+          {!isFullscreen && (
+            <IconButton onClick={handleFullscreen} size="small" title="Fullscreen">
+              <Fullscreen />
+            </IconButton>
+          )}
+        </Box>
+      )}
 
       {error ? (
         <Alert severity="error" sx={{ maxWidth: 600 }}>
@@ -475,18 +509,24 @@ export default function MermaidRenderer({
       ) : svgContent ? (
         <Box
           ref={diagramContainerRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
+          onMouseDown={disableInteractions ? undefined : handleMouseDown}
+          onMouseMove={disableInteractions ? undefined : handleMouseMove}
+          onMouseUp={disableInteractions ? undefined : handleMouseUp}
+          onMouseLeave={disableInteractions ? undefined : handleMouseLeave}
           sx={{
             width: "100%",
             height: "100%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            cursor: isPanning ? "grabbing" : zoom > 1 ? "grab" : "default",
-            userSelect: "none",
+            cursor: disableInteractions
+              ? "default"
+              : isPanning
+                ? "grabbing"
+                : zoom > 1
+                  ? "grab"
+                  : "default",
+            userSelect: disableInteractions ? "auto" : "none",
           }}
         >
           <Box
@@ -531,29 +571,31 @@ export default function MermaidRenderer({
               overflow: "hidden",
             }}
           >
-            <Box
-              sx={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                display: "flex",
-                gap: 1,
-                zIndex: 1,
-              }}
-            >
-              <IconButton onClick={handleZoomIn} size="small" title="Zoom In">
-                <ZoomIn />
-              </IconButton>
-              <IconButton onClick={handleZoomOut} size="small" title="Zoom Out">
-                <ZoomOut />
-              </IconButton>
-              <IconButton onClick={handleResetZoom} size="small" title="Fit to Screen">
-                <FitScreen />
-              </IconButton>
-              <IconButton onClick={handleExitFullscreen} size="small" title="Exit Fullscreen">
-                <FullscreenExit />
-              </IconButton>
-            </Box>
+            {!disableInteractions && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  display: "flex",
+                  gap: 1,
+                  zIndex: 1,
+                }}
+              >
+                <IconButton onClick={handleZoomIn} size="small" title="Zoom In">
+                  <ZoomIn />
+                </IconButton>
+                <IconButton onClick={handleZoomOut} size="small" title="Zoom Out">
+                  <ZoomOut />
+                </IconButton>
+                <IconButton onClick={handleResetZoom} size="small" title="Fit to Screen">
+                  <FitScreen />
+                </IconButton>
+                <IconButton onClick={handleExitFullscreen} size="small" title="Exit Fullscreen">
+                  <FullscreenExit />
+                </IconButton>
+              </Box>
+            )}
             {error ? (
               <Alert severity="error" sx={{ m: 2 }}>
                 <strong>Syntax Error:</strong> {error}
@@ -561,10 +603,10 @@ export default function MermaidRenderer({
             ) : svgContent ? (
               <Box
                 ref={fullscreenContainerRef}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseLeave}
+                onMouseDown={disableInteractions ? undefined : handleMouseDown}
+                onMouseMove={disableInteractions ? undefined : handleMouseMove}
+                onMouseUp={disableInteractions ? undefined : handleMouseUp}
+                onMouseLeave={disableInteractions ? undefined : handleMouseLeave}
                 sx={{
                   width: "100%",
                   height: "100%",
@@ -572,8 +614,14 @@ export default function MermaidRenderer({
                   alignItems: "center",
                   justifyContent: "center",
                   p: 2,
-                  cursor: isPanning ? "grabbing" : zoom > 1 ? "grab" : "default",
-                  userSelect: "none",
+                  cursor: disableInteractions
+                    ? "default"
+                    : isPanning
+                      ? "grabbing"
+                      : zoom > 1
+                        ? "grab"
+                        : "default",
+                  userSelect: disableInteractions ? "auto" : "none",
                   backgroundImage: "radial-gradient(circle, #f0f0f0 2px, transparent 2px)",
                   backgroundSize: "30px 30px",
                 }}
@@ -596,4 +644,3 @@ export default function MermaidRenderer({
     </>
   );
 }
-
