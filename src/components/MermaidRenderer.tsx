@@ -47,6 +47,8 @@ export default function MermaidRenderer({
   const pinchStartDistanceRef = useRef(0);
   const pinchStartZoomRef = useRef(1);
   const pinchLastCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pinchLastDistanceRef = useRef(0);
+  const MOBILE_PINCH_GAIN = 3;
 
   // Helper to get zoom from URL (used during initialization)
   const getInitialZoomFromUrl = (): number | null => {
@@ -86,6 +88,7 @@ export default function MermaidRenderer({
   const [svgContent, setSvgContent] = useState<string>("");
   const [pan, setPan] = useState(initialUrlPan ?? { x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isPinching, setIsPinching] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [fittedZoom, setFittedZoom] = useState(resolvedInitialZoom);
   const [isCalculatingZoom, setIsCalculatingZoom] = useState(false);
@@ -203,13 +206,22 @@ export default function MermaidRenderer({
       const t2 = e.touches[1];
       return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
     };
+    const getTouchCenter = (e: TouchEvent) => {
+      if (e.touches.length < 2) return { x: 0, y: 0 };
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+    };
 
     const touchStart = (e: TouchEvent) => {
       const touches = e.touches;
       if (touches.length === 2) {
         isPinchingRef.current = true;
+        setIsPinching(true);
         pinchStartDistanceRef.current = getTouchDistance(e);
+        pinchLastDistanceRef.current = pinchStartDistanceRef.current;
         pinchStartZoomRef.current = zoom;
+        pinchLastCenterRef.current = getTouchCenter(e);
         e.preventDefault();
         e.stopPropagation();
       } else if (touches.length === 1 && zoom > 1) {
@@ -223,12 +235,28 @@ export default function MermaidRenderer({
       const touches = e.touches;
       if (touches.length === 2 && isPinchingRef.current) {
         const distance = getTouchDistance(e);
-        if (pinchStartDistanceRef.current > 0) {
-          const scale = distance / pinchStartDistanceRef.current;
-          const adjusted = 1 + (scale - 1) * 10; // 10x pinch sensitivity
-          const nextZoom = Math.min(Math.max(pinchStartZoomRef.current * adjusted, 0.3), 10);
-          setZoom(nextZoom);
+        const center = getTouchCenter(e);
+        const target = fullscreenContainer || container;
+        if (target) {
+          const rect = target.getBoundingClientRect();
+          const containerCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+          if (pinchLastDistanceRef.current > 0) {
+            const ratio = distance / pinchLastDistanceRef.current;
+            const k = MOBILE_PINCH_GAIN;
+            setZoom((prevZoom) => {
+              const nextZoom = Math.min(Math.max(prevZoom * Math.pow(ratio, k), 0.3), 10);
+              const ax = center.x - containerCenter.x;
+              const ay = center.y - containerCenter.y;
+              setPan((prevPan) => ({
+                x: prevPan.x + ax - (nextZoom / prevZoom) * ax,
+                y: prevPan.y + ay - (nextZoom / prevZoom) * ay,
+              }));
+              return nextZoom;
+            });
+          }
         }
+        pinchLastDistanceRef.current = distance;
+        pinchLastCenterRef.current = center;
         e.preventDefault();
         e.stopPropagation();
       } else if (touches.length === 1 && isPanning && zoom > 1) {
@@ -242,6 +270,7 @@ export default function MermaidRenderer({
     const touchEnd = (e: TouchEvent) => {
       if (e.touches.length < 2) {
         isPinchingRef.current = false;
+        setIsPinching(false);
       }
       if (e.touches.length === 0) {
         setIsPanning(false);
@@ -610,7 +639,7 @@ export default function MermaidRenderer({
                   ? "grab"
                   : "default",
             userSelect: disableInteractions ? "auto" : "none",
-            touchAction: disableInteractions ? "auto" : "none",
+            touchAction: disableInteractions ? "auto" : (zoom > 1 ? "none" : "auto"),
           }}
         >
           <Box
@@ -618,7 +647,7 @@ export default function MermaidRenderer({
             sx={{
               transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
               transformOrigin: "center",
-              transition: isPanning ? "none" : "transform 0.2s",
+              transition: (isPanning || isPinching) ? "none" : "transform 0.2s",
               opacity: isCalculatingZoom ? 0 : 1,
               visibility: isCalculatingZoom ? "hidden" : "visible",
             }}
@@ -706,7 +735,7 @@ export default function MermaidRenderer({
                         ? "grab"
                         : "default",
                   userSelect: disableInteractions ? "auto" : "none",
-                  touchAction: disableInteractions ? "auto" : "none",
+                  touchAction: disableInteractions ? "auto" : (zoom > 1 ? "none" : "auto"),
                   backgroundImage: "radial-gradient(circle, #f0f0f0 2px, transparent 2px)",
                   backgroundSize: "30px 30px",
                 }}
@@ -715,7 +744,7 @@ export default function MermaidRenderer({
                   sx={{
                     transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
                     transformOrigin: "center",
-                    transition: isPanning ? "none" : "transform 0.2s",
+                    transition: (isPanning || isPinching) ? "none" : "transform 0.2s",
                     opacity: isCalculatingZoom ? 0 : 1,
                     visibility: isCalculatingZoom ? "hidden" : "visible",
                   }}
