@@ -47,7 +47,7 @@ export default function MermaidRenderer({
   const pinchStartZoomRef = useRef(1);
   const pinchLastCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const pinchLastDistanceRef = useRef(0);
-  const MOBILE_PINCH_GAIN = 3;
+  const MOBILE_PINCH_GAIN = 1.5;
 
   // Helper to get zoom from URL (used during initialization)
   const getInitialZoomFromUrl = (): number | null => {
@@ -215,6 +215,7 @@ export default function MermaidRenderer({
     const touchStart = (e: TouchEvent) => {
       const touches = e.touches;
       if (touches.length === 2) {
+        // Two-finger pinch to zoom
         isPinchingRef.current = true;
         setIsPinching(true);
         pinchStartDistanceRef.current = getTouchDistance(e);
@@ -223,42 +224,51 @@ export default function MermaidRenderer({
         pinchLastCenterRef.current = getTouchCenter(e);
         e.preventDefault();
         e.stopPropagation();
-      } else if (touches.length === 1 && zoom > 1) {
+      } else if (touches.length === 1) {
+        // Single-finger pan (no zoom restriction)
         const t = touches[0];
         setIsPanning(true);
         setPanStart({ x: t.clientX - pan.x, y: t.clientY - pan.y });
+        e.preventDefault();
+        e.stopPropagation();
       }
     };
 
     const touchMove = (e: TouchEvent) => {
       const touches = e.touches;
       if (touches.length === 2 && isPinchingRef.current) {
+        // Two-finger pinch to zoom
         const distance = getTouchDistance(e);
         const center = getTouchCenter(e);
         const target = fullscreenContainer || container;
-        if (target) {
+        if (target && pinchLastDistanceRef.current > 0) {
           const rect = target.getBoundingClientRect();
           const containerCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-          if (pinchLastDistanceRef.current > 0) {
-            const ratio = distance / pinchLastDistanceRef.current;
-            const k = MOBILE_PINCH_GAIN;
-            setZoom((prevZoom) => {
-              const nextZoom = Math.min(Math.max(prevZoom * Math.pow(ratio, k), 0.3), 10);
-              const ax = center.x - containerCenter.x;
-              const ay = center.y - containerCenter.y;
-              setPan((prevPan) => ({
-                x: prevPan.x + ax - (nextZoom / prevZoom) * ax,
-                y: prevPan.y + ay - (nextZoom / prevZoom) * ay,
-              }));
-              return nextZoom;
-            });
-          }
+
+          // Simplified zoom calculation with configurable gain
+          const ratio = distance / pinchLastDistanceRef.current;
+          const k = MOBILE_PINCH_GAIN;
+
+          setZoom((prevZoom) => {
+            const nextZoom = Math.min(Math.max(prevZoom * Math.pow(ratio, k), 0.3), 10);
+
+            // Zoom towards the pinch center point
+            const ax = center.x - containerCenter.x;
+            const ay = center.y - containerCenter.y;
+            setPan((prevPan) => ({
+              x: prevPan.x + ax - (nextZoom / prevZoom) * ax,
+              y: prevPan.y + ay - (nextZoom / prevZoom) * ay,
+            }));
+
+            return nextZoom;
+          });
         }
         pinchLastDistanceRef.current = distance;
         pinchLastCenterRef.current = center;
         e.preventDefault();
         e.stopPropagation();
-      } else if (touches.length === 1 && isPanning && zoom > 1) {
+      } else if (touches.length === 1 && isPanning) {
+        // Single-finger pan
         const t = touches[0];
         setPan({ x: t.clientX - panStart.x, y: t.clientY - panStart.y });
         e.preventDefault();
@@ -533,15 +543,13 @@ export default function MermaidRenderer({
   // Handle panning
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disableInteractions) return;
-    if (zoom > 1) {
-      setIsPanning(true);
-      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    }
+    setIsPanning(true);
+    setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disableInteractions) return;
-    if (isPanning && zoom > 1) {
+    if (isPanning) {
       setPan({
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y,
@@ -634,11 +642,9 @@ export default function MermaidRenderer({
               ? "default"
               : isPanning
                 ? "grabbing"
-                : zoom > 1
-                  ? "grab"
-                  : "default",
+                : "grab",
             userSelect: disableInteractions ? "auto" : "none",
-            touchAction: disableInteractions ? "auto" : (zoom > 1 ? "none" : "auto"),
+            touchAction: disableInteractions ? "auto" : "none",
           }}
         >
           <Box
@@ -730,11 +736,9 @@ export default function MermaidRenderer({
                     ? "default"
                     : isPanning
                       ? "grabbing"
-                      : zoom > 1
-                        ? "grab"
-                        : "default",
+                      : "grab",
                   userSelect: disableInteractions ? "auto" : "none",
-                  touchAction: disableInteractions ? "auto" : (zoom > 1 ? "none" : "auto"),
+                  touchAction: disableInteractions ? "auto" : "none",
                   backgroundImage: "radial-gradient(circle, #f0f0f0 2px, transparent 2px)",
                   backgroundSize: "30px 30px",
                 }}
