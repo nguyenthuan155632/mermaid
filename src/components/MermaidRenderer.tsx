@@ -156,8 +156,8 @@ export default function MermaidRenderer({
         e.preventDefault();
         e.stopPropagation();
 
-        // Increased sensitivity for more responsive zoom (10x faster: 0.3)
-        const delta = e.deltaY * -0.3;
+        // Increased sensitivity for more responsive zoom (3x faster: 0.03)
+        const delta = e.deltaY * -0.03;
         setZoom((prevZoom) => Math.min(Math.max(prevZoom + delta, 0.3), 10));
       } else {
         // This is a regular scroll - pan the diagram
