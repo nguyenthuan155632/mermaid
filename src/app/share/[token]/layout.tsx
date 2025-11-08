@@ -1,11 +1,5 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-};
 
 export const metadata: Metadata = {
   icons: {
