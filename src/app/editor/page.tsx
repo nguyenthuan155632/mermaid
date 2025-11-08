@@ -21,6 +21,9 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Stack,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Save,
@@ -55,6 +58,8 @@ function EditorContent() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const debouncedCode = useDebounce(code, 300);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const diagramIdParam = searchParams.get("id");
   const freshParam = searchParams.get("fresh");
@@ -108,6 +113,10 @@ function EditorContent() {
   useEffect(() => {
     localStorage.setItem("mermaid-draft", code);
   }, [code]);
+
+  useEffect(() => {
+    setLeftDrawerOpen(!isMobile);
+  }, [isMobile]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -221,14 +230,18 @@ function EditorContent() {
     }
   };
 
+  const showSidebar = !isMobile && leftDrawerOpen;
+
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "#fafafa" }}>
       {/* Header */}
       <AppBar position="static" color="default" elevation={0} sx={{ bgcolor: "white", borderBottom: "1px solid #e5e7eb" }}>
-        <Toolbar>
-          <IconButton edge="start" onClick={() => setLeftDrawerOpen(!leftDrawerOpen)} sx={{ mr: 2 }}>
-            <MenuIcon />
-          </IconButton>
+        <Toolbar sx={{ flexWrap: isMobile ? "wrap" : "nowrap", gap: isMobile ? 1 : 0 }}>
+          {!isMobile && (
+            <IconButton edge="start" onClick={() => setLeftDrawerOpen(!leftDrawerOpen)} sx={{ mr: 2 }}>
+              <MenuIcon />
+            </IconButton>
+          )}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1 }}>
             <Box
               component="svg"
@@ -251,7 +264,18 @@ function EditorContent() {
               Mermaid Live Editor
             </Typography>
           </Box>
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            justifyContent={isMobile ? "flex-end" : "flex-start"}
+            flexWrap={isMobile ? "wrap" : "nowrap"}
+            sx={{
+              width: { xs: "100%", md: "auto" },
+              mb: isMobile ? 1 : 0,
+              gap: isMobile ? 1 : 0,
+            }}
+          >
             <Button
               variant="text"
               startIcon={<LibraryBooks />}
@@ -259,73 +283,86 @@ function EditorContent() {
             >
               My Diagrams
             </Button>
-            <Button
-              variant="outlined"
-              startIcon={<Share />}
-              onClick={handleShare}
-              disabled={!diagramId}
-              sx={{ mr: 1 }}
-            >
-              Share
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Save />}
-              onClick={handleSave}
-              disabled={saving}
-              sx={{
-                bgcolor: saveSuccess ? "success.main" : "primary.main",
-                color: "white",
-                position: "relative",
-                overflow: "hidden",
-                transition: "all 0.3s ease",
-                transform: saving ? "scale(0.95)" : "scale(1)",
-                "&:hover": {
-                  bgcolor: saveSuccess ? "success.dark" : "primary.dark",
-                  transform: "scale(1.05)",
-                },
-                "&:active": {
-                  transform: "scale(0.95)",
-                },
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  width: "0",
-                  height: "0",
-                  borderRadius: "50%",
-                  background: "rgba(255, 255, 255, 0.5)",
-                  transform: "translate(-50%, -50%)",
-                  transition: "width 0.6s, height 0.6s",
-                },
-                "&:active::before": {
-                  width: "300px",
-                  height: "300px",
-                },
-                "@keyframes pulse": {
-                  "0%": {
-                    boxShadow: "0 0 0 0 rgba(25, 118, 210, 0.7)",
-                  },
-                  "70%": {
-                    boxShadow: "0 0 0 10px rgba(25, 118, 210, 0)",
-                  },
-                  "100%": {
-                    boxShadow: "0 0 0 0 rgba(25, 118, 210, 0)",
-                  },
-                },
-                animation: saving ? "pulse 1.5s infinite" : "none",
-              }}
-            >
-              {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save diagram"}
-            </Button>
-          </Box>
+            {isMobile ? (
+              <>
+                <Button variant="outlined" onClick={() => setPngDialogOpen(true)} sx={{ flexGrow: 1 }}>
+                  Export PNG
+                </Button>
+                <Button variant="outlined" onClick={handleExportSVG} sx={{ flexGrow: 1 }}>
+                  Export SVG
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outlined"
+                  startIcon={<Share />}
+                  onClick={handleShare}
+                  disabled={!diagramId}
+                  sx={{ mr: 1 }}
+                >
+                  Share
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<Save />}
+                  onClick={handleSave}
+                  disabled={saving}
+                  sx={{
+                    bgcolor: saveSuccess ? "success.main" : "primary.main",
+                    color: "white",
+                    position: "relative",
+                    overflow: "hidden",
+                    transition: "all 0.3s ease",
+                    transform: saving ? "scale(0.95)" : "scale(1)",
+                    "&:hover": {
+                      bgcolor: saveSuccess ? "success.dark" : "primary.dark",
+                      transform: "scale(1.05)",
+                    },
+                    "&:active": {
+                      transform: "scale(0.95)",
+                    },
+                    "&::before": {
+                      content: '""',
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      width: "0",
+                      height: "0",
+                      borderRadius: "50%",
+                      background: "rgba(255, 255, 255, 0.5)",
+                      transform: "translate(-50%, -50%)",
+                      transition: "width 0.6s, height 0.6s",
+                    },
+                    "&:active::before": {
+                      width: "300px",
+                      height: "300px",
+                    },
+                    "@keyframes pulse": {
+                      "0%": {
+                        boxShadow: "0 0 0 0 rgba(25, 118, 210, 0.7)",
+                      },
+                      "70%": {
+                        boxShadow: "0 0 0 10px rgba(25, 118, 210, 0)",
+                      },
+                      "100%": {
+                        boxShadow: "0 0 0 0 rgba(25, 118, 210, 0)",
+                      },
+                    },
+                    animation: saving ? "pulse 1.5s infinite" : "none",
+                  }}
+                >
+                  {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save diagram"}
+                </Button>
+              </>
+            )}
+          </Stack>
         </Toolbar>
       </AppBar>
 
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Left Sidebar */}
-        {leftDrawerOpen && (
+        {showSidebar && (
           <Box
             sx={{
               width: 400,
@@ -417,6 +454,7 @@ function EditorContent() {
             overflow: "hidden",
             bgcolor: "white",
             transition: "all 0.3s ease",
+            p: isMobile ? 2 : 0,
           }}
         >
           <MermaidRenderer
