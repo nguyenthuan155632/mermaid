@@ -36,6 +36,9 @@ import {
   Apps,
   Edit,
   Close,
+  ChevronLeft,
+  ChevronRight,
+  UnfoldMore,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
@@ -55,10 +58,12 @@ function EditorContent() {
   const [fixing, setFixing] = useState(false);
   const [samplesOpen, setSamplesOpen] = useState(false);
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(true);
+  const [leftDrawerWidth, setLeftDrawerWidth] = useState<"normal" | "wide" | "closed">("normal");
   const [pngDialogOpen, setPngDialogOpen] = useState(false);
   const [pngResolution, setPngResolution] = useState<number>(2);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [codeDrawerOpen, setCodeDrawerOpen] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
 
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
@@ -66,6 +71,18 @@ function EditorContent() {
 
   const diagramIdParam = searchParams.get("id");
   const freshParam = searchParams.get("fresh");
+
+  // Delay editor mounting until drawer animation completes
+  useEffect(() => {
+    if (codeDrawerOpen && isMobile) {
+      const timer = setTimeout(() => {
+        setEditorReady(true);
+      }, 350); // Slightly longer than transition (300ms)
+      return () => clearTimeout(timer);
+    } else {
+      setEditorReady(false);
+    }
+  }, [codeDrawerOpen, isMobile]);
 
   useEffect(() => {
     const loadDraftFromStorage = () => {
@@ -235,6 +252,36 @@ function EditorContent() {
 
   const showSidebar = !isMobile && leftDrawerOpen;
 
+  // Calculate sidebar width based on state
+  const getSidebarWidth = () => {
+    switch (leftDrawerWidth) {
+      case "closed": return 0;
+      case "normal": return 400;
+      case "wide": return "50%";
+      default: return 400;
+    }
+  };
+
+  // Toggle through sidebar sizes: normal -> wide -> closed -> normal
+  const toggleSidebarWidth = () => {
+    if (leftDrawerWidth === "normal") {
+      setLeftDrawerWidth("wide");
+    } else if (leftDrawerWidth === "wide") {
+      setLeftDrawerWidth("closed");
+      setLeftDrawerOpen(false);
+    } else {
+      setLeftDrawerWidth("normal");
+      setLeftDrawerOpen(true);
+    }
+  };
+
+  // Get button position based on width
+  const getButtonPosition = () => {
+    if (leftDrawerWidth === "closed") return 0;
+    if (leftDrawerWidth === "wide") return "calc(50% - 10px)";
+    return 390;
+  };
+
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "#fafafa" }}>
       {/* Header */}
@@ -388,21 +435,29 @@ function EditorContent() {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <Box sx={{ display: "flex", flex: 1, overflow: "hidden", position: "relative" }}>
         {/* Left Sidebar */}
         {showSidebar && (
           <Box
             sx={{
-              width: 400,
+              width: getSidebarWidth(),
               flexShrink: 0,
-              borderRight: "1px solid #e5e7eb",
+              borderRight: leftDrawerWidth !== "closed" ? "1px solid #e5e7eb" : "none",
               display: "flex",
               flexDirection: "column",
               bgcolor: "white",
               transition: "width 0.3s ease",
+              overflow: "hidden",
             }}
           >
-            <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <Box sx={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              width: "100%",
+              minWidth: leftDrawerWidth === "wide" ? 0 : 400
+            }}>
               <Box sx={{ p: 2, borderBottom: "1px solid #e5e7eb" }}>
                 <TextField
                   placeholder="Diagram Title"
@@ -473,6 +528,45 @@ function EditorContent() {
           </Box>
         )}
 
+        {/* Toggle Sidebar Button - Desktop Only */}
+        {!isMobile && (
+          <IconButton
+            onClick={toggleSidebarWidth}
+            title={
+              leftDrawerWidth === "normal"
+                ? "Expand to 50%"
+                : leftDrawerWidth === "wide"
+                  ? "Close editor"
+                  : "Open editor"
+            }
+            sx={{
+              position: "absolute",
+              left: getButtonPosition(),
+              top: "50%",
+              transform: "translateY(-50%)",
+              zIndex: 10,
+              bgcolor: "primary.main",
+              color: "white",
+              width: 32,
+              height: 64,
+              borderRadius: "0 8px 8px 0",
+              transition: "left 0.3s ease",
+              "&:hover": {
+                bgcolor: "primary.dark",
+              },
+              boxShadow: 2,
+            }}
+          >
+            {leftDrawerWidth === "normal" ? (
+              <UnfoldMore />
+            ) : leftDrawerWidth === "wide" ? (
+              <ChevronLeft />
+            ) : (
+              <ChevronRight />
+            )}
+          </IconButton>
+        )}
+
         {/* Main Preview Area */}
         <Box
           sx={{
@@ -504,100 +598,112 @@ function EditorContent() {
       />
 
       {/* Mobile Code Editor Drawer */}
-      <Drawer
-        anchor="bottom"
-        open={codeDrawerOpen}
-        onClose={() => setCodeDrawerOpen(false)}
-        keepMounted
-        PaperProps={{
-          sx: {
-            height: "50vh",
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            bgcolor: "#fafafa",
-          },
-        }}
-        transitionDuration={300}
-      >
-        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-          {/* Header */}
-          <Box
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-              bgcolor: "white",
-              borderBottom: "1px solid #e5e7eb",
-            }}
-          >
-            <Edit sx={{ color: "primary.main", fontSize: 20 }} />
-            <Typography
-              variant="h6"
+      {isMobile && (
+        <Drawer
+          anchor="bottom"
+          open={codeDrawerOpen}
+          onClose={() => setCodeDrawerOpen(false)}
+          keepMounted
+          PaperProps={{
+            sx: {
+              height: "50vh",
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              bgcolor: "#fafafa",
+            },
+          }}
+          transitionDuration={300}
+        >
+          <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            {/* Header */}
+            <Box
               sx={{
-                flex: 1,
-                fontWeight: 600,
-                fontSize: "1rem"
+                p: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                bgcolor: "white",
+                borderBottom: "1px solid #e5e7eb",
               }}
             >
-              Edit Diagram
-            </Typography>
-            <IconButton onClick={() => setCodeDrawerOpen(false)} size="small">
-              <Close />
-            </IconButton>
-          </Box>
+              <Edit sx={{ color: "primary.main", fontSize: 20 }} />
+              <Typography
+                variant="h6"
+                sx={{
+                  flex: 1,
+                  fontWeight: 600,
+                  fontSize: "1rem"
+                }}
+              >
+                Edit Diagram
+              </Typography>
+              <IconButton onClick={() => setCodeDrawerOpen(false)} size="small">
+                <Close />
+              </IconButton>
+            </Box>
 
-          {/* Title Input */}
-          <Box sx={{ p: 2, bgcolor: "white", borderBottom: "1px solid #e5e7eb" }}>
-            <TextField
-              placeholder="Diagram Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              fullWidth
-              size="small"
-              variant="outlined"
-            />
-          </Box>
+            {/* Title Input */}
+            <Box sx={{ p: 2, bgcolor: "white", borderBottom: "1px solid #e5e7eb" }}>
+              <TextField
+                placeholder="Diagram Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                fullWidth
+                size="small"
+                variant="outlined"
+              />
+            </Box>
 
-          {/* Code Editor */}
-          <Box sx={{ flex: 1, overflow: "hidden" }}>
-            {codeDrawerOpen && <CodeEditor value={code} onChange={setCode} />}
-          </Box>
-
-          {/* Actions Footer */}
-          <Box
-            sx={{
-              p: 2,
-              bgcolor: "white",
-              borderTop: "1px solid #e5e7eb",
+            {/* Code Editor */}
+            <Box sx={{
+              flex: 1,
+              overflow: "hidden",
               display: "flex",
-              gap: 1,
-            }}
-          >
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={() => setSamplesOpen(true)}
-              size="small"
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              {editorReady ? (
+                <CodeEditor value={code} onChange={setCode} />
+              ) : (
+                <Typography color="text.secondary">Loading editor...</Typography>
+              )}
+            </Box>
+
+            {/* Actions Footer */}
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "white",
+                borderTop: "1px solid #e5e7eb",
+                display: "flex",
+                gap: 1,
+              }}
             >
-              Browse Samples
-            </Button>
-            {hasError && (
               <Button
                 fullWidth
                 variant="outlined"
-                color="warning"
-                startIcon={<AutoFixHigh />}
-                onClick={handleFixWithAI}
-                disabled={fixing}
+                onClick={() => setSamplesOpen(true)}
                 size="small"
               >
-                {fixing ? "Fixing..." : "Fix with AI"}
+                Browse Samples
               </Button>
-            )}
+              {hasError && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  color="warning"
+                  startIcon={<AutoFixHigh />}
+                  onClick={handleFixWithAI}
+                  disabled={fixing}
+                  size="small"
+                >
+                  {fixing ? "Fixing..." : "Fix with AI"}
+                </Button>
+              )}
+            </Box>
           </Box>
-        </Box>
-      </Drawer>
+        </Drawer>
+      )}
 
       {/* PNG Export Resolution Dialog */}
       <Dialog open={pngDialogOpen} onClose={() => setPngDialogOpen(false)} maxWidth="xs" fullWidth>
