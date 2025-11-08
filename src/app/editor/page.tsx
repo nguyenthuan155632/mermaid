@@ -33,6 +33,7 @@ import {
   Menu as MenuIcon,
   LibraryBooks,
   Image as ImageIcon,
+  Apps,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
@@ -289,6 +290,9 @@ function EditorContent() {
           </Box>
           {isMobile ? (
             <>
+              <IconButton onClick={() => setSamplesOpen(true)} title="Browse Samples" color="primary" size="small">
+                <Apps fontSize="small" />
+              </IconButton>
               <IconButton onClick={() => router.push("/diagrams")} title="My Diagrams" color="primary" size="small">
                 <LibraryBooks fontSize="small" />
               </IconButton>
