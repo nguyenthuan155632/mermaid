@@ -676,17 +676,31 @@ function EditorContent() {
                 bgcolor: "white",
                 borderTop: "1px solid #e5e7eb",
                 display: "flex",
+                flexDirection: "column",
                 gap: 1,
               }}
             >
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setSamplesOpen(true)}
-                size="small"
-              >
-                Browse Samples
-              </Button>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color={saveSuccess ? "success" : "primary"}
+                  startIcon={<Save />}
+                  onClick={handleSave}
+                  disabled={saving}
+                  size="small"
+                >
+                  {saving ? "Saving..." : saveSuccess ? "Saved!" : "Save"}
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => setSamplesOpen(true)}
+                  size="small"
+                >
+                  Browse Samples
+                </Button>
+              </Box>
               {hasError && (
                 <Button
                   fullWidth
