@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogContent,
   Alert,
-  Paper,
 } from "@mui/material";
 import {
   ZoomIn,

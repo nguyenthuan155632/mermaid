@@ -242,7 +242,7 @@ function EditorContent() {
               <MenuIcon />
             </IconButton>
           )}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1, mt: { xs: 3, sm: 0 } }}>
             <Box
               component="svg"
               sx={{ width: 32, height: 32 }}
