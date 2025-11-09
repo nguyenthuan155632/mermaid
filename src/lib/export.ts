@@ -177,7 +177,7 @@ export async function exportToSVG(
     link.click();
 
     URL.revokeObjectURL(url);
-  } catch (error) {
+  } catch {
     throw new Error("Failed to export SVG");
   }
 }

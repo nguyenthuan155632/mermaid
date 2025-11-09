@@ -233,7 +233,7 @@ function EditorContent() {
 
       // Reset success state after animation
       setTimeout(() => setSaveSuccess(false), 2000);
-    } catch (err) {
+    } catch {
       alert("Failed to save diagram");
     } finally {
       setSaving(false);
@@ -244,7 +244,7 @@ function EditorContent() {
     try {
       await exportToPNG(debouncedCode, title || "diagram", pngResolution, pngBackground);
       setPngDialogOpen(false);
-    } catch (err) {
+    } catch {
       alert("Failed to export PNG");
     }
   };
@@ -252,7 +252,7 @@ function EditorContent() {
   const handleExportSVG = async () => {
     try {
       await exportToSVG(debouncedCode, title || "diagram", 'white');
-    } catch (err) {
+    } catch {
       alert("Failed to export SVG");
     }
   };
@@ -276,7 +276,7 @@ function EditorContent() {
       const shareUrl = `${window.location.origin}/share/${data.shareToken}`;
       await navigator.clipboard.writeText(shareUrl);
       alert("Share link copied to clipboard!");
-    } catch (err) {
+    } catch {
       alert("Failed to generate share link");
     }
   };
@@ -302,7 +302,7 @@ function EditorContent() {
       const data = await response.json();
       setCode(data.fixedCode);
       alert(`Fixed! ${data.explanation}`);
-    } catch (err) {
+    } catch {
       alert("Failed to fix diagram with AI");
     } finally {
       setFixing(false);

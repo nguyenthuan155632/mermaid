@@ -109,7 +109,7 @@ export default function LoginPage() {
               onClick={() => router.push("/signup")}
               sx={{ color: "text.secondary" }}
             >
-              Don't have an account? Sign up
+              Don&apos;t have an account? Sign up
             </Button>
           </form>
         </Paper>
@@ -117,4 +117,3 @@ export default function LoginPage() {
     </Container>
   );
 }
-

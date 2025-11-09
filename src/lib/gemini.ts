@@ -58,7 +58,7 @@ Format your response as JSON:
       fixedCode: text.trim().replace(/```mermaid\n?/g, "").replace(/```\n?/g, "").trim(),
       explanation: "AI fixed the syntax error",
     };
-  } catch (error) {
+  } catch {
     throw new Error("Failed to fix diagram with AI");
   }
 }

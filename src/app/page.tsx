@@ -11,11 +11,10 @@ import {
   Paper,
   Grid,
 } from "@mui/material";
-import { Edit, MenuBook } from "@mui/icons-material";
 
 export default function HomePage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   useEffect(() => {
     if (status === "authenticated") {

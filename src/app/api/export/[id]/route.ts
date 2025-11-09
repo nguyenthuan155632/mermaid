@@ -27,8 +27,13 @@ const exportSchema = z.object({
 });
 
 // Helper to safely parse URL params
-const safeParse = (value: string | null, defaultValue: any) => {
-  if (value === null || value === undefined) return defaultValue;
+const safeParse = <T extends string | number>(
+  value: string | null,
+  defaultValue: T
+): string | T => {
+  if (value === null || value === undefined) {
+    return defaultValue;
+  }
   return value;
 };
 
@@ -170,7 +175,7 @@ export async function GET(
           // Clean up temporary files
           try {
             await unlink(mmdFile);
-          } catch (e) {
+          } catch {
             // Ignore cleanup errors
           }
 
@@ -281,7 +286,7 @@ async function exportToSVGString(
       // Clean up temporary files
       try {
         await unlink(mmdFile);
-      } catch (e) {
+      } catch {
         // Ignore cleanup errors
       }
 

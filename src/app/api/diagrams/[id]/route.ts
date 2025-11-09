@@ -37,7 +37,7 @@ export async function GET(
     }
 
     return NextResponse.json(diagram);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -125,7 +125,7 @@ export async function DELETE(
     await db.delete(diagrams).where(eq(diagrams.id, id));
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

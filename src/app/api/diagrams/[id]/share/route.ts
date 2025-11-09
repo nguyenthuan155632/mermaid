@@ -42,7 +42,7 @@ export async function POST(
       .returning();
 
     return NextResponse.json({ shareToken: updatedDiagram.shareToken });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

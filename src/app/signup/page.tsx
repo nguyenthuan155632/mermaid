@@ -40,7 +40,7 @@ export default function SignupPage() {
       }
 
       router.push("/login?registered=true");
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.");
       setLoading(false);
     }

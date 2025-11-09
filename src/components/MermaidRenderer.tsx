@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import mermaid from "mermaid";
 import {
   Box,
@@ -33,7 +33,6 @@ export default function MermaidRenderer({
   disableInteractions = false,
   initialZoom,
 }: MermaidRendererProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
   const diagramContainerRef = useRef<HTMLDivElement>(null);
@@ -89,7 +88,7 @@ export default function MermaidRenderer({
   const [isPanning, setIsPanning] = useState(false);
   const [isPinching, setIsPinching] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [fittedZoom, setFittedZoom] = useState(resolvedInitialZoom);
+  const [, setFittedZoom] = useState(resolvedInitialZoom);
   const [isCalculatingZoom, setIsCalculatingZoom] = useState(false);
 
   // URL parameter update utility
@@ -112,9 +111,6 @@ export default function MermaidRenderer({
         try {
           const params = new URLSearchParams(window.location.search);
 
-          // Preserve the 'id' parameter if it exists
-          const currentId = params.get("id");
-
           // Round zoom to 2 decimal places for cleaner URLs
           params.set("zoom", newZoom.toFixed(2));
 
@@ -124,7 +120,7 @@ export default function MermaidRenderer({
           // Use replaceState to avoid creating too many history entries
           const newUrl = `${window.location.pathname}?${params.toString()}`;
           window.history.replaceState({}, "", newUrl);
-        } catch (error) {
+        } catch {
           // Silently fail if URL update fails (e.g., in environments without history API)
         }
       }, 500); // 500ms debounce
@@ -307,9 +303,12 @@ export default function MermaidRenderer({
 
   useEffect(() => {
     if (!code.trim()) {
+      // We intentionally reset derived state synchronously when the editor is empty.
+      /* eslint-disable react-hooks/set-state-in-effect */
       setError(null);
       setSvgContent("");
       setIsCalculatingZoom(false);
+      /* eslint-enable react-hooks/set-state-in-effect */
       lastCalculatedSvg.current = "";
       isCalculatingRef.current = false;
       return;
@@ -421,6 +420,7 @@ export default function MermaidRenderer({
       // Just mark as calculated and hide the loading state
       if (svgContent && lastCalculatedSvg.current !== svgContent) {
         lastCalculatedSvg.current = svgContent;
+        /* eslint-disable-next-line react-hooks/set-state-in-effect */
         setIsCalculatingZoom(false);
       }
       return;

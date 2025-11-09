@@ -47,7 +47,7 @@ export async function GET() {
       .orderBy(sampleDiagrams.order);
 
     return NextResponse.json(samples);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch samples" },
       { status: 500 }

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     console.log("POST /api/diagrams - Starting");
     const session = await auth();
     console.log("Session:", session);
-    
+
     if (!session?.user?.id) {
       console.log("Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     console.log("Body:", body);
-    
+
     const validatedData = createDiagramSchema.parse(body);
     console.log("Validated data:", validatedData);
 
@@ -152,7 +152,7 @@ export async function GET(request: Request) {
         totalPages,
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
