@@ -78,13 +78,13 @@ export default function SamplesSidebar({
             borderBottom: "1px solid #e5e7eb",
           }}
         >
-          <AccountTree sx={{ color: "primary.main", fontSize: { xs: 20, sm: 24 } }} />
+          <AccountTree sx={{ color: "primary.main", fontSize: { xs: 16, sm: 20 } }} />
           <Typography
             variant="h6"
             sx={{
               flex: 1,
               fontWeight: 600,
-              fontSize: { xs: "1rem", sm: "1.25rem" }
+              fontSize: { xs: "0.85rem", sm: "1rem" }
             }}
           >
             Sample Diagrams
@@ -109,11 +109,11 @@ export default function SamplesSidebar({
                     onClose();
                   }}
                   sx={{
-                    borderRadius: "20px",
+                    borderRadius: "16px",
                     textTransform: "none",
-                    px: { xs: 2, sm: 3 },
-                    py: { xs: 0.75, sm: 1 },
-                    fontSize: { xs: "0.875rem", sm: "1rem" },
+                    px: { xs: 1.25, sm: 2 },
+                    py: { xs: 0.4, sm: 0.6 },
+                    fontSize: { xs: "0.75rem", sm: "0.85rem" },
                     bgcolor: "white",
                     border: "1px solid #e5e7eb",
                     color: "text.primary",
@@ -135,7 +135,7 @@ export default function SamplesSidebar({
             <Box sx={{ mt: 4 }}>
               <Typography
                 variant="subtitle2"
-                sx={{ mb: 2, color: "text.secondary", fontWeight: 600 }}
+                sx={{ mb: 1.5, color: "text.secondary", fontWeight: 600, fontSize: "0.75rem" }}
               >
                 Categories
               </Typography>
@@ -148,6 +148,9 @@ export default function SamplesSidebar({
                     sx={{
                       bgcolor: "white",
                       border: "1px solid #e5e7eb",
+                      fontSize: "0.7rem",
+                      px: 0.5,
+                      py: 0.2,
                     }}
                   />
                 ))}
@@ -159,4 +162,3 @@ export default function SamplesSidebar({
     </Drawer>
   );
 }
-
