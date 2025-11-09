@@ -21,11 +21,11 @@ export const metadata: Metadata = {
   description: "Create and edit Mermaid diagrams",
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.svg", type: "image/svg+xml" }
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.png", type: "image/png" }
     ],
-    shortcut: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg" }],
+    shortcut: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/icon.png" }],
   },
 };
 

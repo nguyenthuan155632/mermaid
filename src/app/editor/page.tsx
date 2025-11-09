@@ -598,22 +598,16 @@ function EditorContent() {
             minWidth: 0
           }}>
             <Box
-              component="svg"
-              sx={{ width: { xs: 28, md: 32 }, height: { xs: 28, md: 32 }, flexShrink: 0 }}
-              viewBox="0 0 100 100"
-            >
-              <rect fill="#FF2E88" width="100" height="100" rx="10" />
-              <text
-                x="50"
-                y="70"
-                fontSize="60"
-                fill="white"
-                textAnchor="middle"
-                fontWeight="bold"
-              >
-                M
-              </text>
-            </Box>
+              component="img"
+              src="/favicon.png"
+              alt="MermaidX logo"
+              sx={{
+                width: { xs: 28, md: 32 },
+                height: { xs: 28, md: 32 },
+                flexShrink: 0,
+                borderRadius: 1.5,
+              }}
+            />
             <Typography
               variant="h6"
               sx={{
@@ -881,7 +875,7 @@ function EditorContent() {
                       onClick={() => setEmbedDialogOpen(true)}
                       size="small"
                       fullWidth
-                    disabled={!activeDiagramId}
+                      disabled={!activeDiagramId}
                     >
                       Embed
                     </Button>
