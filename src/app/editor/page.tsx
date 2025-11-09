@@ -22,6 +22,7 @@ import {
   useTheme,
   useMediaQuery,
   Drawer,
+  Collapse,
 } from "@mui/material";
 import {
   Save,
@@ -67,6 +68,7 @@ function EditorContent() {
   const [codeDrawerOpen, setCodeDrawerOpen] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
 
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
@@ -195,6 +197,9 @@ function EditorContent() {
 
   useEffect(() => {
     setLeftDrawerOpen(!isMobile);
+    if (!isMobile) {
+      setMobileActionsOpen(false);
+    }
   }, [isMobile]);
 
   const handleSave = async () => {
@@ -406,23 +411,13 @@ function EditorContent() {
               <IconButton onClick={() => router.push("/diagrams")} title="My Diagrams" color="primary" size="small">
                 <LibraryBooks fontSize="small" />
               </IconButton>
-              <IconButton onClick={handleShare} title="Share" color="primary" size="small" disabled={!diagramId}>
-                <Share fontSize="small" />
-              </IconButton>
-              <IconButton onClick={() => setPngDialogOpen(true)} title="Export PNG" color="primary" size="small">
-                <ImageIcon fontSize="small" />
-              </IconButton>
-              <IconButton onClick={handleExportSVG} title="Export SVG" color="primary" size="small">
-                <GetApp fontSize="small" />
-              </IconButton>
               <IconButton
-                onClick={() => setEmbedDialogOpen(true)}
-                title={diagramId ? "Embed" : "Save diagram to embed"}
+                onClick={() => setMobileActionsOpen((prev) => !prev)}
+                title={mobileActionsOpen ? "Hide actions" : "More actions"}
                 color="primary"
                 size="small"
-                disabled={!diagramId}
               >
-                <Code fontSize="small" />
+                {mobileActionsOpen ? <Close fontSize="small" /> : <UnfoldMore fontSize="small" />}
               </IconButton>
             </>
           ) : (
@@ -501,6 +496,57 @@ function EditorContent() {
             </Stack>
           )}
         </Toolbar>
+        {isMobile && (
+          <Collapse in={mobileActionsOpen}>
+            <Stack
+              spacing={1}
+              sx={{
+                px: 2,
+                pb: 2,
+                borderTop: "1px solid #e5e7eb",
+                bgcolor: "white",
+              }}
+            >
+              <Button
+                variant="outlined"
+                startIcon={<Share />}
+                onClick={handleShare}
+                disabled={!diagramId}
+                fullWidth
+              >
+                Share Diagram
+              </Button>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="contained"
+                  startIcon={<ImageIcon />}
+                  onClick={() => setPngDialogOpen(true)}
+                  fullWidth
+                >
+                  Export PNG
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<GetApp />}
+                  onClick={handleExportSVG}
+                  fullWidth
+                >
+                  Export SVG
+                </Button>
+              </Stack>
+              <Button
+                variant="outlined"
+                startIcon={<Code />}
+                onClick={() => setEmbedDialogOpen(true)}
+                disabled={!diagramId}
+                fullWidth
+              >
+                Embed Options
+              </Button>
+            </Stack>
+          </Collapse>
+        )}
       </AppBar>
 
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden", position: "relative" }}>
