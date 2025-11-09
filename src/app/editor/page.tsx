@@ -415,7 +415,13 @@ function EditorContent() {
               <IconButton onClick={handleExportSVG} title="Export SVG" color="primary" size="small">
                 <GetApp fontSize="small" />
               </IconButton>
-              <IconButton onClick={() => setEmbedDialogOpen(true)} title="Embed" color="primary" size="small">
+              <IconButton
+                onClick={() => setEmbedDialogOpen(true)}
+                title={diagramId ? "Embed" : "Save diagram to embed"}
+                color="primary"
+                size="small"
+                disabled={!diagramId}
+              >
                 <Code fontSize="small" />
               </IconButton>
             </>
@@ -577,6 +583,7 @@ function EditorContent() {
                     onClick={() => setEmbedDialogOpen(true)}
                     size="small"
                     fullWidth
+                    disabled={!diagramId}
                   >
                     Embed
                   </Button>
