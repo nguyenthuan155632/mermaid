@@ -54,6 +54,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { exportToPNG, exportToSVG } from "@/lib/export";
 import { DiagramSnapshot } from "@/types";
 
+const LAST_DIAGRAM_ID_STORAGE_KEY = "mermaid-last-diagram-id";
+
 const formatRelativeTime = (value: string | Date) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unknown";
@@ -211,30 +213,68 @@ function EditorContent() {
       }
     };
 
-    if (diagramIdParam) {
-      fetch(`/api/diagrams/${diagramIdParam}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.id) {
-            setDiagramId(data.id);
-            setTitle(data.title);
-            setCode(data.code);
-            fetchSnapshots(data.id);
-          } else {
-            loadDraftFromStorage();
-            setSnapshots([]);
-          }
-        })
-        .catch(() => {
+    const loadDiagramById = async (id: string) => {
+      try {
+        const response = await fetch(`/api/diagrams/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to load diagram");
+        }
+        const data = await response.json();
+        if (data.id) {
+          setDiagramId(data.id);
+          setTitle(data.title);
+          setCode(data.code);
+          fetchSnapshots(data.id);
+          return true;
+        }
+      } catch {
+        // fallthrough
+      }
+      return false;
+    };
+
+    const init = async () => {
+      if (diagramIdParam) {
+        const success = await loadDiagramById(diagramIdParam);
+        if (!success) {
           loadDraftFromStorage();
           setSnapshots([]);
-        });
-      return;
-    }
+        }
+        return;
+      }
 
+      const storedId = (() => {
+        try {
+          return localStorage.getItem(LAST_DIAGRAM_ID_STORAGE_KEY);
+        } catch {
+          return null;
+        }
+      })();
+
+      if (storedId) {
+        const success = await loadDiagramById(storedId);
+        if (success) {
+          return;
+        }
+        try {
+          localStorage.removeItem(LAST_DIAGRAM_ID_STORAGE_KEY);
+        } catch {
+          // ignore
+        }
+      }
+
+      loadDraftFromStorage();
+      setSnapshots([]);
+    };
+
+    init();
+  }, [diagramIdParam, fetchSnapshots]);
+
+  useEffect(() => {
     if (freshParam === "1") {
       try {
         localStorage.removeItem("mermaid-draft");
+        localStorage.removeItem(LAST_DIAGRAM_ID_STORAGE_KEY);
       } catch {
         // ignore storage errors
       }
@@ -245,10 +285,19 @@ function EditorContent() {
       router.replace("/editor");
       return;
     }
+  }, [freshParam, router]);
 
-    setSnapshots([]);
-    loadDraftFromStorage();
-  }, [diagramIdParam, freshParam, router, fetchSnapshots]);
+  useEffect(() => {
+    try {
+      if (diagramId) {
+        localStorage.setItem(LAST_DIAGRAM_ID_STORAGE_KEY, diagramId);
+      } else {
+        localStorage.removeItem(LAST_DIAGRAM_ID_STORAGE_KEY);
+      }
+    } catch {
+      // ignore storage failures
+    }
+  }, [diagramId]);
 
   useEffect(() => {
     localStorage.setItem("mermaid-draft", code);
