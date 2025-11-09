@@ -39,16 +39,17 @@ import {
   Share,
   Add,
   Home,
-  Logout,
   Search as SearchIcon,
   ContentCopy,
   Visibility,
   Refresh,
   Close,
   Save,
+  Code,
 } from "@mui/icons-material";
 import { useSession, signOut } from "next-auth/react";
 import MermaidRenderer from "@/components/MermaidRenderer";
+import MarkdownEmbedDialog from "@/components/MarkdownEmbedDialog";
 import { Diagram } from "@/types";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -133,6 +134,10 @@ export default function DiagramsPage() {
   const [duplicateTarget, setDuplicateTarget] = useState<string | null>(null);
   const [deleteInProgress, setDeleteInProgress] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
+  const [embedDialog, setEmbedDialog] = useState<{
+    open: boolean;
+    diagram: Diagram | null;
+  }>({ open: false, diagram: null });
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -658,6 +663,18 @@ export default function DiagramsPage() {
                           </IconButton>
                         </span>
                       </Tooltip>
+                      <Tooltip title={embedDialog.diagram?.id === diagram.id ? "Embedding..." : "Embed"}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => setEmbedDialog({ open: true, diagram })}
+                            aria-label="Embed diagram"
+                            disabled={embedDialog.diagram?.id === diagram.id}
+                          >
+                            <Code fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Stack>
                     <Tooltip title="Delete diagram">
                       <span>
@@ -837,6 +854,17 @@ export default function DiagramsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Markdown Embed Dialog */}
+      {embedDialog.diagram && (
+        <MarkdownEmbedDialog
+          open={embedDialog.open}
+          onClose={() => setEmbedDialog({ open: false, diagram: null })}
+          diagramId={embedDialog.diagram.id}
+          diagramTitle={embedDialog.diagram.title}
+          baseUrl={window.location.origin}
+        />
+      )}
 
       <Snackbar
         open={snackbar.open}

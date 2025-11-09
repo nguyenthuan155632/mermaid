@@ -1,0 +1,53 @@
+<!-- Mermaid diagram: flowchart TD
+    Start([Validation/Import Process]) --> TryCatch{Try block}
+    
+    TryCatch -->|Success| ProcessData[Process data normally]
+    
+    ProcessData --> CheckResults{Check results}
+    
+    CheckResults -->|Success >= 50%| PartialSuccess[Mark as completed<br/>with warnings]
+    CheckResults -->|Success < 50%| PartialFailure[Mark as failed<br/>but save progress]
+    CheckResults -->|Complete success| CompleteSuccess[Mark as completed]
+    
+    TryCatch -->|StandardError| CatchError[Catch StandardError]
+    
+    CatchError --> LogError[Log to Rails.logger.error]
+    
+    LogError --> ReportSentry[Report to Sentry]
+    
+    ReportSentry --> SaveState{Can save<br/>partial state?}
+    
+    SaveState -->|Yes| PersistFallback[persist_basic_state_fallback:<br/>- Save processed_records<br/>- Save failed_records<br/>- Save error_message]
+    
+    SaveState -->|No| UpdateFailed[Update status to 'failed'<br/>with error message]
+    
+    PersistFallback --> RetryAvailable{Retry<br/>available?}
+    UpdateFailed --> RetryAvailable
+    
+    RetryAvailable -->|Yes| UserRetry[User clicks retry button]
+    
+    UserRetry --> ResetState[Call retry_processing! or<br/>retry_validation!<br/>State: failed → pending]
+    
+    ResetState --> RequeueJob[Re-enqueue background job]
+    
+    RequeueJob --> Start
+    
+    RetryAvailable -->|No| MaxRetries[Max retries reached or<br/>manual intervention needed]
+    
+    PartialSuccess --> NotifyUser[Notify user with stats]
+    PartialFailure --> NotifyUser
+    CompleteSuccess --> NotifyUser
+    MaxRetries --> NotifyUser
+    
+    NotifyUser --> End([End])
+    
+    style CatchError fill:#ff5722
+    style ReportSentry fill:#ff9800
+    style PersistFallback fill:#ffc107
+    style UserRetry fill:#2196f3
+    style CompleteSuccess fill:#4caf50 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="monospace">
+    Server-side SVG export not yet implemented. Please use the editor to export diagrams.
+  </text>
+</svg>

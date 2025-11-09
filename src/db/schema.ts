@@ -19,12 +19,14 @@ export const diagrams = pgTable(
     description: text("description"),
     isPublic: boolean("is_public").default(false).notNull(),
     shareToken: text("share_token").unique(),
+    exportToken: text("export_token").unique(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     userIdIdx: index("diagrams_user_id_idx").on(table.userId),
     shareTokenIdx: index("diagrams_share_token_idx").on(table.shareToken),
+    exportTokenIdx: index("diagrams_export_token_idx").on(table.exportToken),
   })
 );
 

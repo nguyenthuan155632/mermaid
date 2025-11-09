@@ -126,7 +126,6 @@ export default function MermaidRenderer({
           window.history.replaceState({}, "", newUrl);
         } catch (error) {
           // Silently fail if URL update fails (e.g., in environments without history API)
-          console.warn("Failed to update URL parameters:", error);
         }
       }, 500); // 500ms debounce
     },
@@ -351,18 +350,10 @@ export default function MermaidRenderer({
     const svgElement = containerRef.current?.querySelector("svg");
 
     if (!container || !svgElement) {
-      console.warn("calculateFitZoom: container or SVG element not found");
       return 1;
     }
 
     const containerRect = container.getBoundingClientRect();
-
-    // Debug: Log container dimensions
-    console.log("Container dimensions:", {
-      width: containerRect.width,
-      height: containerRect.height,
-      isFullscreen: !!fullscreenContainerRef.current
-    });
 
     // Get SVG's intrinsic dimensions (not affected by current zoom)
     let svgWidth = 0;
@@ -374,14 +365,12 @@ export default function MermaidRenderer({
       const parts = viewBox.split(/\s+/);
       svgWidth = parseFloat(parts[2]);
       svgHeight = parseFloat(parts[3]);
-      console.log("SVG dimensions from viewBox:", { svgWidth, svgHeight });
     } else {
       // Fallback to width/height attributes
       const widthAttr = svgElement.getAttribute("width");
       const heightAttr = svgElement.getAttribute("height");
       svgWidth = parseFloat(widthAttr || "0");
       svgHeight = parseFloat(heightAttr || "0");
-      console.log("SVG dimensions from attributes:", { svgWidth, svgHeight, widthAttr, heightAttr });
     }
 
     // If we still don't have dimensions, try getBBox (unscaled bounding box)
@@ -390,16 +379,13 @@ export default function MermaidRenderer({
         const bbox = svgElement.getBBox();
         svgWidth = bbox.width;
         svgHeight = bbox.height;
-        console.log("SVG dimensions from getBBox:", { svgWidth, svgHeight });
       } catch (e) {
         // getBBox can fail in some cases, return default zoom
-        console.error("getBBox failed:", e);
         return 1;
       }
     }
 
     if (svgWidth === 0 || svgHeight === 0) {
-      console.warn("Could not determine SVG dimensions");
       return 1;
     }
 
@@ -417,25 +403,10 @@ export default function MermaidRenderer({
       // Wide diagram (like flowcharts) - prioritize height for better readability
       // This allows horizontal scrolling but makes the diagram taller and more readable
       fitZoom = scaleY;
-      console.log("Wide diagram detected (aspect ratio:", aspectRatio, ") - using height-based zoom");
     } else {
       // Normal or tall diagram - fit to both dimensions
       fitZoom = Math.min(scaleX, scaleY);
-      console.log("Normal diagram (aspect ratio:", aspectRatio, ") - using min(scaleX, scaleY)");
     }
-
-    console.log("Zoom calculation:", {
-      containerWidth: containerRect.width,
-      containerHeight: containerRect.height,
-      svgWidth,
-      svgHeight,
-      aspectRatio: svgWidth / svgHeight,
-      scaleX,
-      scaleY,
-      fitZoom,
-      "Using height-based zoom": aspectRatio > 2,
-      "Final zoom": fitZoom
-    });
 
     // Clamp between min and max zoom levels
     return Math.min(Math.max(fitZoom, 0.3), 10);
@@ -526,14 +497,9 @@ export default function MermaidRenderer({
 
   const handleResetZoom = () => {
     if (disableInteractions) return;
-    console.log("=== FIT TO SCREEN CLICKED ===");
-    console.log("Current zoom:", zoom);
-    console.log("Current fittedZoom:", fittedZoom);
 
     // Recalculate fit zoom based on current container size
     const newFitZoom = calculateFitZoom();
-    console.log("handleResetZoom: calculated new fit zoom:", newFitZoom);
-    console.log("=== END FIT TO SCREEN ===");
 
     setZoom(newFitZoom);
     setFittedZoom(newFitZoom); // Update the fitted zoom state

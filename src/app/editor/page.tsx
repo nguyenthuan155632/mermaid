@@ -15,8 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  FormLabel,
   RadioGroup,
   FormControlLabel,
   Radio,
@@ -39,10 +37,12 @@ import {
   ChevronLeft,
   ChevronRight,
   UnfoldMore,
+  Code,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
 import MermaidRenderer from "@/components/MermaidRenderer";
+import MarkdownEmbedDialog from "@/components/MarkdownEmbedDialog";
 import { useDebounce } from "@/hooks/useDebounce";
 import { exportToPNG, exportToSVG } from "@/lib/export";
 
@@ -66,6 +66,7 @@ function EditorContent() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [codeDrawerOpen, setCodeDrawerOpen] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
+  const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
 
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
@@ -414,6 +415,9 @@ function EditorContent() {
               <IconButton onClick={handleExportSVG} title="Export SVG" color="primary" size="small">
                 <GetApp fontSize="small" />
               </IconButton>
+              <IconButton onClick={() => setEmbedDialogOpen(true)} title="Embed" color="primary" size="small">
+                <Code fontSize="small" />
+              </IconButton>
             </>
           ) : (
             <Stack
@@ -566,6 +570,15 @@ function EditorContent() {
                     fullWidth
                   >
                     Export SVG
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Code />}
+                    onClick={() => setEmbedDialogOpen(true)}
+                    size="small"
+                    fullWidth
+                  >
+                    Embed
                   </Button>
                   {hasError && (
                     <Button
@@ -1027,6 +1040,17 @@ function EditorContent() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Markdown Embed Dialog */}
+      {diagramId && (
+        <MarkdownEmbedDialog
+          open={embedDialogOpen}
+          onClose={() => setEmbedDialogOpen(false)}
+          diagramId={diagramId}
+          diagramTitle={title || "diagram"}
+          baseUrl={window.location.origin}
+        />
+      )}
     </Box >
   );
 }
