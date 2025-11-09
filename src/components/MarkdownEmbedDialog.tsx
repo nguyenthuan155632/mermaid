@@ -153,8 +153,8 @@ export default function MarkdownEmbedDialog({
             mr: { sm: muiTheme.spacing(2) },
             width: "100%",
             maxWidth: 420,
-            height: { xs: "50vh", sm: "auto" },
-            maxHeight: { xs: "50vh", sm: "75vh" },
+            height: { xs: "70vh", sm: "auto" },
+            maxHeight: { xs: "70vh", sm: "75vh" },
             border: `1px solid ${muiTheme.palette.divider}`,
             boxShadow: "0 6px 30px rgba(15,23,42,0.07)",
             backgroundColor:
