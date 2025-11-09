@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  forwardRef,
+  type ReactElement,
+  type Ref,
+} from "react";
 import {
   Dialog,
   Box,
@@ -24,6 +31,7 @@ import {
   Code,
 } from "@mui/icons-material";
 import Slide from "@mui/material/Slide";
+import type { TransitionProps } from "@mui/material/transitions";
 
 interface MarkdownEmbedDialogProps {
   open: boolean;
@@ -49,6 +57,22 @@ export default function MarkdownEmbedDialog({
   const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const Transition = useMemo(
+    () =>
+      forwardRef(function Transition(
+        props: TransitionProps & { children: ReactElement },
+        ref: Ref<unknown>
+      ) {
+        return (
+          <Slide
+            direction={isMobile ? "up" : "left"}
+            ref={ref}
+            {...props}
+          />
+        );
+      }),
+    [isMobile]
+  );
 
   useEffect(() => {
     if (open && diagramId) {
@@ -115,8 +139,7 @@ export default function MarkdownEmbedDialog({
         maxWidth="xs"
         fullWidth
         keepMounted
-        TransitionComponent={Slide}
-        TransitionProps={{ direction: isMobile ? "up" : "left" }}
+        TransitionComponent={Transition}
         PaperProps={{
           sx: (muiTheme) => ({
             m: 0,

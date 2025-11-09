@@ -1,4 +1,19 @@
-import { pgTable, text, timestamp, uuid, integer, boolean, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  integer,
+  boolean,
+  index,
+  customType,
+} from "drizzle-orm/pg-core";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -20,6 +35,14 @@ export const diagrams = pgTable(
     isPublic: boolean("is_public").default(false).notNull(),
     shareToken: text("share_token").unique(),
     exportToken: text("export_token").unique(),
+    exportCodeHash: text("export_code_hash"),
+    pngBlob: bytea("png_blob"),
+    pngBackground: text("png_background"),
+    pngScale: integer("png_scale"),
+    pngGeneratedAt: timestamp("png_generated_at"),
+    svgBlob: bytea("svg_blob"),
+    svgBackground: text("svg_background"),
+    svgGeneratedAt: timestamp("svg_generated_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -53,4 +76,3 @@ export type Diagram = typeof diagrams.$inferSelect;
 export type NewDiagram = typeof diagrams.$inferInsert;
 export type SampleDiagram = typeof sampleDiagrams.$inferSelect;
 export type NewSampleDiagram = typeof sampleDiagrams.$inferInsert;
-

@@ -6,11 +6,18 @@ import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { writeFile, unlink, mkdir } from "fs/promises";
+import { writeFile, unlink, mkdir, readFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { createHash } from "crypto";
 
 const execAsync = promisify(exec);
+const toArrayBuffer = (data: Buffer | Uint8Array): ArrayBuffer => {
+  const view = data instanceof Uint8Array ? data : new Uint8Array(data);
+  const copy = new Uint8Array(view.byteLength);
+  copy.set(view);
+  return copy.buffer;
+};
 
 const exportSchema = z.object({
   format: z.enum(["png", "svg"]).default("png"),
@@ -55,6 +62,10 @@ export async function GET(
     }
 
     const diagramData = diagram[0];
+    const currentCodeHash = createHash("sha256")
+      .update(diagramData.code)
+      .digest("hex");
+    const isCacheStale = diagramData.exportCodeHash !== currentCodeHash;
 
     // Check if diagram is public or has valid export token
     // For public diagrams, allow access without token
@@ -83,6 +94,22 @@ export async function GET(
 
     // Use mermaid CLI for both SVG and PNG export
     if (format === "png") {
+      const hasCachedPng =
+        !isCacheStale &&
+        diagramData.pngBlob &&
+        diagramData.pngBackground === background &&
+        diagramData.pngScale === resolution;
+
+      if (hasCachedPng && diagramData.pngBlob) {
+        return new NextResponse(toArrayBuffer(diagramData.pngBlob), {
+          headers: {
+            "Content-Type": "image/png",
+            "Cache-Control": "public, max-age=3600",
+            "Content-Disposition": `inline; filename="${diagramData.title}.png"`,
+          },
+        });
+      }
+
       try {
         // Create a temporary directory for files
         const tempDir = join(tmpdir(), `mermaid-export-${Date.now()}`);
@@ -109,15 +136,28 @@ export async function GET(
           );
 
           // Read the PNG file
-          const fs = require('fs');
-          const pngBuffer = fs.readFileSync(pngFile);
+          const pngBuffer = await readFile(pngFile);
 
           // Clean up temporary files
           await unlink(mmdFile);
           await unlink(pngFile);
 
+          await db
+            .update(diagrams)
+            .set({
+              pngBlob: pngBuffer,
+              pngBackground: background,
+              pngScale: resolution,
+              pngGeneratedAt: new Date(),
+              exportCodeHash: currentCodeHash,
+              ...(isCacheStale
+                ? { svgBlob: null, svgBackground: null, svgGeneratedAt: null }
+                : {}),
+            })
+            .where(eq(diagrams.id, id));
+
           // Return PNG as response
-          return new NextResponse(pngBuffer, {
+          return new NextResponse(toArrayBuffer(pngBuffer), {
             headers: {
               "Content-Type": "image/png",
               "Cache-Control": "public, max-age=3600", // Cache for 1 hour
@@ -154,11 +194,36 @@ export async function GET(
       }
     }
 
+    if (
+      !isCacheStale &&
+      diagramData.svgBlob &&
+      diagramData.svgBackground === background
+    ) {
+      const cachedSvg = Buffer.from(diagramData.svgBlob).toString("utf-8");
+      return new NextResponse(cachedSvg, {
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=3600",
+          "Content-Disposition": `inline; filename="${diagramData.title}.${format}"`,
+        },
+      });
+    }
+
     // For SVG, we can modify the existing export function
-    const svgContent = await exportToSVGString(
-      diagramData.code,
-      background
-    );
+    const svgContent = await exportToSVGString(diagramData.code, background);
+
+    await db
+      .update(diagrams)
+      .set({
+        svgBlob: Buffer.from(svgContent, "utf-8"),
+        svgBackground: background,
+        svgGeneratedAt: new Date(),
+        exportCodeHash: currentCodeHash,
+        ...(isCacheStale
+          ? { pngBlob: null, pngBackground: null, pngScale: null, pngGeneratedAt: null }
+          : {}),
+      })
+      .where(eq(diagrams.id, id));
 
     return new NextResponse(svgContent, {
       headers: {

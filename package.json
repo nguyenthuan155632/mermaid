@@ -7,7 +7,7 @@
     "dev": "next dev -p 4025",
     "build": "next build",
     "start": "next start -p 4025",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:setup": "node scripts/setup-database.js"
