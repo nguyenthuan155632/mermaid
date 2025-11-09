@@ -12,6 +12,12 @@ import { tmpdir } from "os";
 import { createHash } from "crypto";
 
 const execAsync = promisify(exec);
+const puppeteerConfigFile = join(
+  process.cwd(),
+  "scripts",
+  "puppeteer.config.cjs"
+);
+const puppeteerConfigFlag = `--puppeteerConfigFile "${puppeteerConfigFile}"`;
 const toArrayBuffer = (data: Buffer | Uint8Array): ArrayBuffer => {
   const view = data instanceof Uint8Array ? data : new Uint8Array(data);
   const copy = new Uint8Array(view.byteLength);
@@ -136,7 +142,7 @@ export async function GET(
         try {
           // Use mermaid CLI to render the diagram to PNG
           await execAsync(
-            `npx mmdc --input ${mmdFile} --output ${pngFile} --outputFormat png ${bgConfig} ${scaleConfig}`,
+            `npx mmdc --input "${mmdFile}" --output "${pngFile}" --outputFormat png ${bgConfig} ${scaleConfig} ${puppeteerConfigFlag}`,
             { cwd: process.cwd() }
           );
 
@@ -272,7 +278,7 @@ async function exportToSVGString(
     try {
       // Use mermaid CLI to render the diagram to SVG
       const { stdout } = await execAsync(
-        `npx mmdc --input ${mmdFile} --output - --outputFormat svg ${bgConfig}`,
+        `npx mmdc --input "${mmdFile}" --output - --outputFormat svg ${bgConfig} ${puppeteerConfigFlag}`,
         { cwd: process.cwd() }
       );
 

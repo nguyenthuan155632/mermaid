@@ -90,6 +90,16 @@ export default function MermaidRenderer({
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [, setFittedZoom] = useState(resolvedInitialZoom);
   const [isCalculatingZoom, setIsCalculatingZoom] = useState(false);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   // URL parameter update utility
 
@@ -328,12 +338,14 @@ export default function MermaidRenderer({
         const id = `mermaid-${Date.now()}`;
         const { svg } = await mermaid.render(id, code);
         setSvgContent(svg);
-        if (onSuccess) onSuccess();
+        const successHandler = onSuccessRef.current;
+        if (successHandler) successHandler();
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to render diagram";
         setError(errorMessage);
-        if (onError) onError(errorMessage);
+        const errorHandler = onErrorRef.current;
+        if (errorHandler) errorHandler(errorMessage);
         setSvgContent("");
         setIsCalculatingZoom(false);
         isCalculatingRef.current = false;
@@ -342,7 +354,7 @@ export default function MermaidRenderer({
 
     renderDiagram();
     // Dependencies include callbacks/flags that affect render behaviour.
-  }, [code, disableInteractions, onError, onSuccess]);
+  }, [code, disableInteractions]);
 
   // Calculate optimal zoom to fit diagram in viewport
   const calculateFitZoom = () => {
