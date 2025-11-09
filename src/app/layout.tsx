@@ -1,10 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProviderWrapper } from "@/components/ThemeProvider";
 import { SessionProviderWrapper } from "@/components/SessionProvider";
 import ErrorSuppressor from "@/components/ErrorSuppressor";
 
-const inter = Inter({ subsets: ["latin"] });
+const recursive = localFont({
+  src: [
+    {
+      path: "../../public/fonts/recursive-latin-crsv-normal.woff2",
+      style: "normal",
+      weight: "400",
+    },
+  ],
+  variable: "--font-recursive",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Mermaid Diagram Editor",
@@ -33,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${recursive.className} ${recursive.variable}`}>
         <ErrorSuppressor />
         <SessionProviderWrapper>
           <ThemeProviderWrapper>
@@ -44,4 +54,3 @@ export default function RootLayout({
     </html>
   );
 }
-

@@ -22,7 +22,7 @@ const theme = createTheme({
     divider: "#e5e7eb",
   },
   typography: {
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily: 'var(--font-recursive), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   components: {
     MuiButton: {
