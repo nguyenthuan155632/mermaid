@@ -53,6 +53,24 @@ export const diagrams = pgTable(
   })
 );
 
+export const diagramSnapshots = pgTable(
+  "diagram_snapshots",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    diagramId: uuid("diagram_id")
+      .notNull()
+      .references(() => diagrams.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    code: text("code").notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    diagramIdIdx: index("diagram_snapshots_diagram_id_idx").on(table.diagramId),
+    createdAtIdx: index("diagram_snapshots_created_at_idx").on(table.createdAt),
+  })
+);
+
 export const sampleDiagrams = pgTable(
   "sample_diagrams",
   {
@@ -74,5 +92,7 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Diagram = typeof diagrams.$inferSelect;
 export type NewDiagram = typeof diagrams.$inferInsert;
+export type DiagramSnapshot = typeof diagramSnapshots.$inferSelect;
+export type NewDiagramSnapshot = typeof diagramSnapshots.$inferInsert;
 export type SampleDiagram = typeof sampleDiagrams.$inferSelect;
 export type NewSampleDiagram = typeof sampleDiagrams.$inferInsert;

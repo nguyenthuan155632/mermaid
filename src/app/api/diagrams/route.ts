@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db";
-import { diagrams } from "@/db/schema";
+import { diagrams, diagramSnapshots } from "@/db/schema";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import {
@@ -46,6 +46,13 @@ export async function POST(request: Request) {
         description: validatedData.description || null,
       })
       .returning();
+
+    await db.insert(diagramSnapshots).values({
+      diagramId: newDiagram.id,
+      title: newDiagram.title,
+      code: newDiagram.code,
+      description: newDiagram.description,
+    });
 
     console.log("Created diagram:", newDiagram);
     return NextResponse.json(newDiagram, { status: 201 });

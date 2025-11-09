@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db";
-import { diagrams } from "@/db/schema";
+import { diagrams, diagramSnapshots } from "@/db/schema";
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
@@ -82,6 +82,13 @@ export async function PATCH(
       .where(eq(diagrams.id, id))
       .returning();
 
+    await db.insert(diagramSnapshots).values({
+      diagramId: updatedDiagram.id,
+      title: updatedDiagram.title,
+      code: updatedDiagram.code,
+      description: updatedDiagram.description,
+    });
+
     return NextResponse.json(updatedDiagram);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -132,4 +139,3 @@ export async function DELETE(
     );
   }
 }
-

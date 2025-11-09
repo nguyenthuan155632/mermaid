@@ -10,6 +10,15 @@ export interface Diagram {
   updatedAt: Date;
 }
 
+export interface DiagramSnapshot {
+  id: string;
+  diagramId: string;
+  title: string;
+  code: string;
+  description: string | null;
+  createdAt: Date;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -26,4 +35,3 @@ export interface SampleDiagram {
   order: number;
   createdAt: Date;
 }
-

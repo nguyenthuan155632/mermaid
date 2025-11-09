@@ -26,6 +26,8 @@ interface MermaidRendererProps {
   initialZoom?: number;
 }
 
+const MERMAID_ERROR_PATTERNS = [/syntax error in text/i, /mermaid version/i];
+
 export default function MermaidRenderer({
   code,
   onError,
@@ -314,11 +316,9 @@ export default function MermaidRenderer({
   useEffect(() => {
     if (!code.trim()) {
       // We intentionally reset derived state synchronously when the editor is empty.
-      /* eslint-disable react-hooks/set-state-in-effect */
       setError(null);
       setSvgContent("");
       setIsCalculatingZoom(false);
-      /* eslint-enable react-hooks/set-state-in-effect */
       lastCalculatedSvg.current = "";
       isCalculatingRef.current = false;
       return;
@@ -337,6 +337,9 @@ export default function MermaidRenderer({
         }
         const id = `mermaid-${Date.now()}`;
         const { svg } = await mermaid.render(id, code);
+        if (MERMAID_ERROR_PATTERNS.some((pattern) => pattern.test(svg))) {
+          throw new Error("Syntax error in text");
+        }
         setSvgContent(svg);
         const successHandler = onSuccessRef.current;
         if (successHandler) successHandler();
@@ -433,7 +436,6 @@ export default function MermaidRenderer({
       // Just mark as calculated and hide the loading state
       if (svgContent && lastCalculatedSvg.current !== svgContent) {
         lastCalculatedSvg.current = svgContent;
-        /* eslint-disable-next-line react-hooks/set-state-in-effect */
         setIsCalculatingZoom(false);
       }
       return;

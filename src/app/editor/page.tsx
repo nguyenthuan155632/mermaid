@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -23,6 +23,8 @@ import {
   useMediaQuery,
   Drawer,
   Collapse,
+  Chip,
+  CircularProgress,
 } from "@mui/material";
 import {
   Save,
@@ -39,6 +41,10 @@ import {
   ChevronRight,
   UnfoldMore,
   Code,
+  History,
+  Restore,
+  ExpandLess,
+  ExpandMore,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
@@ -46,6 +52,21 @@ import MermaidRenderer from "@/components/MermaidRenderer";
 import MarkdownEmbedDialog from "@/components/MarkdownEmbedDialog";
 import { useDebounce } from "@/hooks/useDebounce";
 import { exportToPNG, exportToSVG } from "@/lib/export";
+import { DiagramSnapshot } from "@/types";
+
+const formatRelativeTime = (value: string | Date) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+};
 
 function EditorContent() {
   const searchParams = useSearchParams();
@@ -69,13 +90,43 @@ function EditorContent() {
   const [editorReady, setEditorReady] = useState(false);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
+  const [snapshots, setSnapshots] = useState<DiagramSnapshot[]>([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
+  const [revertingSnapshotId, setRevertingSnapshotId] = useState<string | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [sidebarSections, setSidebarSections] = useState({
+    samples: false,
+    actions: false,
+    history: false,
+  });
 
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+  const fetchSnapshots = useCallback(async (targetId: string) => {
+    setSnapshotsLoading(true);
+    try {
+      const response = await fetch(`/api/diagrams/${targetId}/snapshots`);
+      if (!response.ok) {
+        throw new Error("Failed to load version history");
+      }
+      const data: { items: DiagramSnapshot[] } = await response.json();
+      setSnapshots(data.items ?? []);
+    } catch (err) {
+      console.error("Failed to fetch diagram snapshots", err);
+    } finally {
+      setSnapshotsLoading(false);
+    }
+  }, []);
+
+  const toggleSection = (section: keyof typeof sidebarSections) => {
+    setSidebarSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
   const diagramIdParam = searchParams.get("id");
   const freshParam = searchParams.get("fresh");
+  const activeDiagramId = diagramId ?? diagramIdParam;
 
   // Generate preview SVG with transparent background option
   useEffect(() => {
@@ -167,11 +218,16 @@ function EditorContent() {
             setDiagramId(data.id);
             setTitle(data.title);
             setCode(data.code);
+            fetchSnapshots(data.id);
           } else {
             loadDraftFromStorage();
+            setSnapshots([]);
           }
         })
-        .catch(loadDraftFromStorage);
+        .catch(() => {
+          loadDraftFromStorage();
+          setSnapshots([]);
+        });
       return;
     }
 
@@ -184,16 +240,24 @@ function EditorContent() {
       setDiagramId(null);
       setTitle("");
       setCode("");
+      setSnapshots([]);
       router.replace("/editor");
       return;
     }
 
+    setSnapshots([]);
     loadDraftFromStorage();
-  }, [diagramIdParam, freshParam, router]);
+  }, [diagramIdParam, freshParam, router, fetchSnapshots]);
 
   useEffect(() => {
     localStorage.setItem("mermaid-draft", code);
   }, [code]);
+
+  useEffect(() => {
+    if (!diagramId) {
+      setHistoryDrawerOpen(false);
+    }
+  }, [diagramId]);
 
   useEffect(() => {
     setLeftDrawerOpen(!isMobile);
@@ -219,7 +283,7 @@ function EditorContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          code: debouncedCode,
+          code,
         }),
       });
 
@@ -233,6 +297,10 @@ function EditorContent() {
         // Update URL with the new diagram ID
         router.replace(`/editor?id=${data.id}`);
       }
+      const nextDiagramId = diagramId ?? data.id;
+      if (nextDiagramId) {
+        await fetchSnapshots(nextDiagramId);
+      }
       setSaveSuccess(true);
       alert("Diagram saved successfully!");
 
@@ -242,6 +310,34 @@ function EditorContent() {
       alert("Failed to save diagram");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRevertSnapshot = async (snapshotId: string) => {
+    if (!diagramId) {
+      return;
+    }
+
+    setRevertingSnapshotId(snapshotId);
+    try {
+      const response = await fetch(`/api/diagrams/${diagramId}/snapshots/${snapshotId}/revert`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to revert snapshot");
+      }
+
+      const data = await response.json();
+      setTitle(data.title);
+      setCode(data.code);
+      setDiagramId(data.id);
+      await fetchSnapshots(data.id);
+      alert("Diagram reverted to the selected snapshot");
+    } catch {
+      alert("Failed to revert snapshot");
+    } finally {
+      setRevertingSnapshotId(null);
     }
   };
 
@@ -263,13 +359,13 @@ function EditorContent() {
   };
 
   const handleShare = async () => {
-    if (!diagramId) {
+    if (!activeDiagramId) {
       alert("Please save the diagram first");
       return;
     }
 
     try {
-      const response = await fetch(`/api/diagrams/${diagramId}/share`, {
+      const response = await fetch(`/api/diagrams/${activeDiagramId}/share`, {
         method: "POST",
       });
 
@@ -312,6 +408,88 @@ function EditorContent() {
     } finally {
       setFixing(false);
     }
+  };
+
+  const renderHistoryBody = () => {
+    if (!diagramId) {
+      return (
+        <Typography variant="body2" color="text.secondary">
+          Save the diagram to start tracking version history.
+        </Typography>
+      );
+    }
+
+    if (snapshotsLoading) {
+      return (
+        <Stack direction="row" spacing={1} alignItems="center">
+          <CircularProgress size={16} thickness={5} />
+          <Typography variant="body2" color="text.secondary">
+            Loading history…
+          </Typography>
+        </Stack>
+      );
+    }
+
+    if (snapshots.length === 0) {
+      return (
+        <Typography variant="body2" color="text.secondary">
+          Snapshots will appear here every time you save the diagram.
+        </Typography>
+      );
+    }
+
+    return (
+      <Stack spacing={1.5} sx={{ mt: 1 }}>
+        {snapshots.slice(0, 20).map((snapshot, index) => {
+          const isCurrent = index === 0;
+          return (
+            <Box
+              key={snapshot.id}
+              sx={{
+                border: "1px solid #e5e7eb",
+                borderRadius: 1.5,
+                p: 1.5,
+                bgcolor: isCurrent ? "#f8fafc" : "white",
+              }}
+            >
+              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    pr: 1,
+                  }}
+                >
+                  {snapshot.title || "Untitled diagram"}
+                </Typography>
+                {isCurrent ? (
+                  <Chip label="Current" size="small" color="success" variant="outlined" />
+                ) : null}
+              </Stack>
+              <Typography variant="caption" color="text.secondary">
+                {formatRelativeTime(snapshot.createdAt)} · {new Date(snapshot.createdAt).toLocaleString()}
+              </Typography>
+              {!isCurrent && (
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Restore fontSize="small" />}
+                    onClick={() => handleRevertSnapshot(snapshot.id)}
+                    disabled={revertingSnapshotId === snapshot.id}
+                  >
+                    {revertingSnapshotId === snapshot.id ? "Reverting..." : "Revert"}
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          );
+        })}
+      </Stack>
+    );
   };
 
   const showSidebar = !isMobile && leftDrawerOpen;
@@ -437,7 +615,7 @@ function EditorContent() {
                 variant="outlined"
                 startIcon={<Share />}
                 onClick={handleShare}
-                disabled={!diagramId}
+                disabled={!activeDiagramId}
                 sx={{ mr: 1 }}
               >
                 Share
@@ -502,6 +680,7 @@ function EditorContent() {
               spacing={1}
               sx={{
                 px: 2,
+                pt: 2,
                 pb: 2,
                 borderTop: "1px solid #e5e7eb",
                 bgcolor: "white",
@@ -511,7 +690,7 @@ function EditorContent() {
                 variant="outlined"
                 startIcon={<Share />}
                 onClick={handleShare}
-                disabled={!diagramId}
+                disabled={!activeDiagramId}
                 fullWidth
               >
                 Share Diagram
@@ -539,10 +718,19 @@ function EditorContent() {
                 variant="outlined"
                 startIcon={<Code />}
                 onClick={() => setEmbedDialogOpen(true)}
-                disabled={!diagramId}
+                disabled={!activeDiagramId}
                 fullWidth
               >
                 Embed Options
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<History />}
+                onClick={() => setHistoryDrawerOpen(true)}
+                disabled={!activeDiagramId}
+                fullWidth
+              >
+                Version History
               </Button>
             </Stack>
           </Collapse>
@@ -587,66 +775,100 @@ function EditorContent() {
               </Box>
               <Divider />
               <Box sx={{ p: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                  Sample Diagrams
-                </Typography>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => setSamplesOpen(true)}
-                  size="small"
-                >
-                  Browse Samples
-                </Button>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    Sample Diagrams
+                  </Typography>
+                  <IconButton size="small" onClick={() => toggleSection("samples")}
+                    aria-label="Toggle sample diagrams section">
+                    {sidebarSections.samples ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                  </IconButton>
+                </Stack>
+                <Collapse in={sidebarSections.samples} unmountOnExit>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => setSamplesOpen(true)}
+                    size="small"
+                  >
+                    Browse Samples
+                  </Button>
+                </Collapse>
               </Box>
               <Divider />
               <Box sx={{ p: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                  Actions
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<GetApp />}
-                    onClick={() => setPngDialogOpen(true)}
-                    size="small"
-                    fullWidth
-                  >
-                    Export PNG
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<GetApp />}
-                    onClick={handleExportSVG}
-                    size="small"
-                    fullWidth
-                  >
-                    Export SVG
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Code />}
-                    onClick={() => setEmbedDialogOpen(true)}
-                    size="small"
-                    fullWidth
-                    disabled={!diagramId}
-                  >
-                    Embed
-                  </Button>
-                  {hasError && (
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    Actions
+                  </Typography>
+                  <IconButton size="small" onClick={() => toggleSection("actions")} aria-label="Toggle actions section">
+                    {sidebarSections.actions ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                  </IconButton>
+                </Stack>
+                <Collapse in={sidebarSections.actions} unmountOnExit>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                     <Button
                       variant="outlined"
-                      color="warning"
-                      startIcon={<AutoFixHigh />}
-                      onClick={handleFixWithAI}
-                      disabled={fixing}
+                      startIcon={<GetApp />}
+                      onClick={() => setPngDialogOpen(true)}
                       size="small"
                       fullWidth
                     >
-                      {fixing ? "Fixing..." : "Fix with AI"}
+                      Export PNG
                     </Button>
-                  )}
-                </Box>
+                    <Button
+                      variant="outlined"
+                      startIcon={<GetApp />}
+                      onClick={handleExportSVG}
+                      size="small"
+                      fullWidth
+                    >
+                      Export SVG
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Code />}
+                      onClick={() => setEmbedDialogOpen(true)}
+                      size="small"
+                      fullWidth
+                    disabled={!activeDiagramId}
+                    >
+                      Embed
+                    </Button>
+                    {hasError && (
+                      <Button
+                        variant="outlined"
+                        color="warning"
+                        startIcon={<AutoFixHigh />}
+                        onClick={handleFixWithAI}
+                        disabled={fixing}
+                        size="small"
+                        fullWidth
+                      >
+                        {fixing ? "Fixing..." : "Fix with AI"}
+                      </Button>
+                    )}
+                  </Box>
+                </Collapse>
+              </Box>
+              <Divider />
+              <Box sx={{ p: 2 }}>
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <History fontSize="small" color="action" />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      Version History
+                    </Typography>
+                  </Stack>
+                  <IconButton size="small" onClick={() => toggleSection("history")} aria-label="Toggle version history section">
+                    {sidebarSections.history ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                  </IconButton>
+                </Stack>
+                <Collapse in={sidebarSections.history} unmountOnExit>
+                  <Box sx={{ maxHeight: 260, overflowY: "auto", pr: 0.5 }}>
+                    {renderHistoryBody()}
+                  </Box>
+                </Collapse>
               </Box>
             </Box>
           </Box>
@@ -720,6 +942,52 @@ function EditorContent() {
         onClose={() => setSamplesOpen(false)}
         onSelectSample={(code) => setCode(code)}
       />
+
+      {/* Mobile History Drawer */}
+      {isMobile && (
+        <Drawer
+          anchor="right"
+          open={historyDrawerOpen}
+          onClose={() => setHistoryDrawerOpen(false)}
+          keepMounted
+          PaperProps={{
+            sx: {
+              width: "85vw",
+              maxWidth: 360,
+              bgcolor: "#fafafa",
+            },
+          }}
+        >
+          <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            <Box
+              sx={{
+                p: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                borderBottom: "1px solid #e5e7eb",
+                bgcolor: "white",
+              }}
+            >
+              <History color="primary" />
+              <Typography variant="h6" sx={{ flex: 1, fontWeight: 600 }}>
+                Version History
+              </Typography>
+              <IconButton size="small" onClick={() => toggleSection("history")}>
+                {sidebarSections.history ? <ExpandLess /> : <ExpandMore />}
+              </IconButton>
+              <IconButton onClick={() => setHistoryDrawerOpen(false)} size="small">
+                <Close />
+              </IconButton>
+            </Box>
+            <Collapse in={sidebarSections.history} unmountOnExit>
+              <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+                {renderHistoryBody()}
+              </Box>
+            </Collapse>
+          </Box>
+        </Drawer>
+      )}
 
       {/* Mobile Code Editor Drawer */}
       {isMobile && (
