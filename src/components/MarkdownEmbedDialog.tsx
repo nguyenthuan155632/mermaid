@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
   forwardRef,
   type ReactElement,
   type Ref,
@@ -33,6 +34,7 @@ import {
 } from "@mui/icons-material";
 import Slide from "@mui/material/Slide";
 import type { TransitionProps } from "@mui/material/transitions";
+import { encodeExportLink } from "@/lib/exportLinkEncoding";
 
 interface MarkdownEmbedDialogProps {
   open: boolean;
@@ -56,6 +58,7 @@ export default function MarkdownEmbedDialog({
   const [exportToken, setExportToken] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const prefetchedExports = useRef<Set<string>>(new Set());
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const Transition = useMemo(
@@ -98,13 +101,19 @@ export default function MarkdownEmbedDialog({
 
   const exportUrl = useMemo(() => {
     if (!exportToken) return "";
-    const params = new URLSearchParams({
-      format,
-      resolution,
-      background,
-      token: exportToken,
-    });
-    return `${baseUrl}/api/export/${diagramId}?${params.toString()}`;
+    try {
+      const encoded = encodeExportLink({
+        diagramId,
+        format,
+        resolution: Number(resolution),
+        background,
+        token: exportToken,
+      });
+      return `${baseUrl}/ex/_/${encoded}`;
+    } catch (encodeError) {
+      console.error("Export link encode error:", encodeError);
+      return "";
+    }
   }, [background, baseUrl, diagramId, exportToken, format, resolution]);
 
   const markdownLink = useMemo(() => {
@@ -113,10 +122,25 @@ export default function MarkdownEmbedDialog({
     return `[![](${exportUrl})](${editorUrl})`;
   }, [baseUrl, diagramId, exportUrl]);
 
+  const prefetchExportAsset = useCallback(async () => {
+    if (!exportUrl) return;
+    if (prefetchedExports.current.has(exportUrl)) return;
+    prefetchedExports.current.add(exportUrl);
+    try {
+      await fetch(exportUrl, { cache: "no-store" });
+    } catch (err) {
+      prefetchedExports.current.delete(exportUrl);
+      console.error("Export prefetch error:", err);
+    }
+  }, [exportUrl]);
+
   const handleCopy = async (text: string, type: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
+      if (exportUrl) {
+        void prefetchExportAsset();
+      }
       setTimeout(() => setCopied(null), 1500);
     } catch (err) {
       setError("Failed to copy to clipboard");

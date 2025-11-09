@@ -10,6 +10,7 @@ import { writeFile, unlink, mkdir, readFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { createHash } from "crypto";
+import { decodeExportLink, encodeExportLink } from "@/lib/exportLinkEncoding";
 
 const execAsync = promisify(exec);
 const puppeteerConfigFile = join(
@@ -43,26 +44,167 @@ const safeParse = <T extends string | number>(
   return value;
 };
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const { format, resolution, background, token } = exportSchema.parse({
-      format: safeParse(searchParams.get("format"), "png"),
-      resolution: safeParse(searchParams.get("resolution"), 2),
-      background: safeParse(searchParams.get("background"), "white"),
-      token: searchParams.get("token") || undefined,
-    });
+type RouteParams =
+  | { slug?: string[] }
+  | { id?: string }; // backward compatibility with Next's typing inference
 
-    const { id } = await params;
+type PathMode = "query" | "compact" | "encoded";
+
+const buildSvgFallbackUrl = ({
+  requestUrl,
+  diagramId,
+  background,
+  resolution,
+  token,
+  mode,
+}: {
+  requestUrl: URL;
+  diagramId: string;
+  background: "white" | "transparent";
+  resolution: number;
+  token?: string | null;
+  mode: PathMode;
+}): string => {
+  const origin = `${requestUrl.protocol}//${requestUrl.host}`;
+  if (mode === "compact") {
+    const segments = [
+      "api",
+      "export",
+      diagramId,
+      "svg",
+      resolution.toString(),
+      background,
+    ];
+    if (token) {
+      segments.push(token);
+    }
+    return `${origin}/${segments.join("/")}`;
+  }
+  if (mode === "encoded") {
+    const encoded = encodeExportLink({
+      diagramId,
+      format: "svg",
+      resolution,
+      background,
+      token,
+    });
+    return `${origin}/ex/_/${encoded}`;
+  }
+  const search = new URLSearchParams({
+    format: "svg",
+    resolution: resolution.toString(),
+    background,
+  });
+  if (token) {
+    search.set("token", token);
+  }
+  return `${origin}/api/export/${diagramId}?${search.toString()}`;
+};
+
+export async function GET(request: Request, { params }: { params: Promise<RouteParams> }) {
+  try {
+    const requestUrl = new URL(request.url);
+    const searchParams = requestUrl.searchParams;
+    const resolvedParams = await params;
+    const slug = "slug" in resolvedParams && Array.isArray(resolvedParams.slug)
+      ? resolvedParams.slug
+      : "id" in resolvedParams && resolvedParams.id
+        ? [resolvedParams.id]
+        : [];
+
+    if (!slug.length) {
+      return NextResponse.json(
+        { error: "Diagram id is required" },
+        { status: 400 }
+      );
+    }
+
+    let diagramId: string;
+    let pathMode: PathMode = "query";
+    let encodedConfig: {
+      format: string;
+      resolution: number;
+      background: "white" | "transparent";
+      token?: string | null;
+    } | null = null;
+
+    if (slug[0] === "_") {
+      if (slug.length < 2) {
+        return NextResponse.json(
+          { error: "Missing encoded export value" },
+          { status: 400 }
+        );
+      }
+      if (slug.length > 2) {
+        return NextResponse.json(
+          { error: "Encoded export path is invalid" },
+          { status: 400 }
+        );
+      }
+      try {
+        const decoded = decodeExportLink(slug[1]);
+        diagramId = decoded.diagramId;
+        encodedConfig = {
+          format: decoded.format,
+          resolution: decoded.resolution,
+          background: decoded.background,
+          token: decoded.token,
+        };
+        pathMode = "encoded";
+      } catch (decodeError) {
+        console.error("Encoded export decode error:", decodeError);
+        return NextResponse.json(
+          { error: "Invalid encoded export link" },
+          { status: 400 }
+        );
+      }
+    } else {
+      const [slugDiagramId, ...rest] = slug;
+      diagramId = slugDiagramId;
+
+      if (!diagramId) {
+        return NextResponse.json(
+          { error: "Diagram id is required" },
+          { status: 400 }
+        );
+      }
+
+      if (rest.length > 0 && rest.length < 3) {
+        return NextResponse.json(
+          { error: "Invalid export path" },
+          { status: 400 }
+        );
+      }
+      if (rest.length > 4) {
+        return NextResponse.json(
+          { error: "Export path has too many segments" },
+          { status: 400 }
+        );
+      }
+
+      if (rest.length >= 3) {
+        pathMode = "compact";
+        encodedConfig = {
+          format: rest[0],
+          resolution: Number(rest[1]),
+          background: rest[2] as "white" | "transparent",
+          token: rest[3],
+        };
+      }
+    }
+
+    const { format, resolution, background, token } = exportSchema.parse({
+      format: encodedConfig?.format ?? safeParse(searchParams.get("format"), "png"),
+      resolution: encodedConfig?.resolution ?? safeParse(searchParams.get("resolution"), 2),
+      background: encodedConfig?.background ?? safeParse(searchParams.get("background"), "white"),
+      token: encodedConfig?.token ?? searchParams.get("token") ?? undefined,
+    });
 
     // Find diagram
     const diagram = await db
       .select()
       .from(diagrams)
-      .where(eq(diagrams.id, id))
+      .where(eq(diagrams.id, diagramId))
       .limit(1);
 
     if (!diagram.length) {
@@ -94,7 +236,7 @@ export async function GET(
       await db
         .update(diagrams)
         .set({ exportToken: newExportToken })
-        .where(eq(diagrams.id, id));
+        .where(eq(diagrams.id, diagramId));
 
       // Update diagram data with new token
       diagramData.exportToken = newExportToken;
@@ -165,7 +307,7 @@ export async function GET(
                 ? { svgBlob: null, svgBackground: null, svgGeneratedAt: null }
                 : {}),
             })
-            .where(eq(diagrams.id, id));
+            .where(eq(diagrams.id, diagramId));
 
           // Return PNG as response
           return new NextResponse(toArrayBuffer(pngBuffer), {
@@ -188,7 +330,14 @@ export async function GET(
           return NextResponse.json(
             {
               error: "PNG export failed. Please try SVG format or export from the editor directly.",
-              svgUrl: `${request.url.split('?')[0]}?format=svg&token=${token}`
+              svgUrl: buildSvgFallbackUrl({
+                requestUrl,
+                diagramId,
+                background,
+                resolution,
+                token,
+                mode: pathMode,
+              }),
             },
             { status: 500 }
           );
@@ -198,7 +347,14 @@ export async function GET(
         return NextResponse.json(
           {
             error: "PNG export failed. Please try SVG format or export from the editor directly.",
-            svgUrl: `${request.url.split('?')[0]}?format=svg&token=${token}`
+            svgUrl: buildSvgFallbackUrl({
+              requestUrl,
+              diagramId,
+              background,
+              resolution,
+              token,
+              mode: pathMode,
+            }),
           },
           { status: 500 }
         );
@@ -234,7 +390,7 @@ export async function GET(
           ? { pngBlob: null, pngBackground: null, pngScale: null, pngGeneratedAt: null }
           : {}),
       })
-      .where(eq(diagrams.id, id));
+      .where(eq(diagrams.id, diagramId));
 
     return new NextResponse(svgContent, {
       headers: {
