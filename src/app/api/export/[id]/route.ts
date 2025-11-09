@@ -15,7 +15,7 @@ const execAsync = promisify(exec);
 const puppeteerConfigFile = join(
   process.cwd(),
   "scripts",
-  "puppeteer.config.cjs"
+  "puppeteer.config.json"
 );
 const puppeteerConfigFlag = `--puppeteerConfigFile "${puppeteerConfigFile}"`;
 const toArrayBuffer = (data: Buffer | Uint8Array): ArrayBuffer => {
