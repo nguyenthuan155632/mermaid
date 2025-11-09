@@ -103,6 +103,7 @@ function EditorContent() {
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const historySectionOpen = isMobile ? true : sidebarSections.history;
 
   const fetchSnapshots = useCallback(async (targetId: string) => {
     setSnapshotsLoading(true);
@@ -864,7 +865,7 @@ function EditorContent() {
                     {sidebarSections.history ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                   </IconButton>
                 </Stack>
-                <Collapse in={sidebarSections.history} unmountOnExit>
+                <Collapse in={historySectionOpen} unmountOnExit>
                   <Box sx={{ maxHeight: 260, overflowY: "auto", pr: 0.5 }}>
                     {renderHistoryBody()}
                   </Box>
@@ -973,14 +974,11 @@ function EditorContent() {
               <Typography variant="h6" sx={{ flex: 1, fontWeight: 600 }}>
                 Version History
               </Typography>
-              <IconButton size="small" onClick={() => toggleSection("history")}>
-                {sidebarSections.history ? <ExpandLess /> : <ExpandMore />}
-              </IconButton>
               <IconButton onClick={() => setHistoryDrawerOpen(false)} size="small">
                 <Close />
               </IconButton>
             </Box>
-            <Collapse in={sidebarSections.history} unmountOnExit>
+            <Collapse in={historySectionOpen}>
               <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
                 {renderHistoryBody()}
               </Box>
