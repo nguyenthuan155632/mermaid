@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useMemo,
+  useCallback,
   forwardRef,
   type ReactElement,
   type Ref,
@@ -74,13 +75,7 @@ export default function MarkdownEmbedDialog({
     [isMobile]
   );
 
-  useEffect(() => {
-    if (open && diagramId) {
-      generateExportToken();
-    }
-  }, [open, diagramId]);
-
-  const generateExportToken = async () => {
+  const generateExportToken = useCallback(async () => {
     setError(null);
     try {
       const response = await fetch(`/api/diagrams/${diagramId}/export-token`, {
@@ -93,7 +88,13 @@ export default function MarkdownEmbedDialog({
       setError("Failed to generate export link. Please try again.");
       console.error("Export token error:", err);
     }
-  };
+  }, [diagramId]);
+
+  useEffect(() => {
+    if (open && diagramId) {
+      generateExportToken();
+    }
+  }, [open, diagramId, generateExportToken]);
 
   const exportUrl = useMemo(() => {
     if (!exportToken) return "";

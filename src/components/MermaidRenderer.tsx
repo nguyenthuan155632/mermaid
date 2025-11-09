@@ -341,7 +341,8 @@ export default function MermaidRenderer({
     };
 
     renderDiagram();
-  }, [code]); // Removed onError and onSuccess from dependencies
+    // Dependencies include callbacks/flags that affect render behaviour.
+  }, [code, disableInteractions, onError, onSuccess]);
 
   // Calculate optimal zoom to fit diagram in viewport
   const calculateFitZoom = () => {
@@ -378,7 +379,7 @@ export default function MermaidRenderer({
         const bbox = svgElement.getBBox();
         svgWidth = bbox.width;
         svgHeight = bbox.height;
-      } catch (e) {
+      } catch {
         // getBBox can fail in some cases, return default zoom
         return 1;
       }
