@@ -1,10 +1,8 @@
 import { NextAuthConfig } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
 
 export const authConfig = {
   trustHost: true,
@@ -60,49 +58,6 @@ export const authConfig = {
             image: newUser[0].image,
           };
         }
-      },
-    }),
-    Credentials({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const user = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email as string))
-          .limit(1);
-
-        if (user.length === 0) {
-          return null;
-        }
-
-        // Check if user has a password (OAuth users might not)
-        if (!user[0].password) {
-          return null;
-        }
-
-        const isValidPassword = await bcrypt.compare(
-          credentials.password as string,
-          user[0].password
-        );
-
-        if (!isValidPassword) {
-          return null;
-        }
-
-        return {
-          id: user[0].id,
-          email: user[0].email,
-          name: user[0].name,
-          image: user[0].image,
-        };
       },
     }),
   ],
