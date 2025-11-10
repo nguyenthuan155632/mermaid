@@ -411,6 +411,13 @@ const ThreadCommentRenderer: React.FC<{
                   "& strike, & s": {
                     textDecoration: "line-through",
                   },
+                  "& a": {
+                    color: "#1a73e8",
+                    textDecoration: "underline",
+                    "&:hover": {
+                      color: "#1765cc",
+                    },
+                  },
                 }}
                 dangerouslySetInnerHTML={{ __html: comment.content }}
               />

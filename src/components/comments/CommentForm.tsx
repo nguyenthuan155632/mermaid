@@ -27,6 +27,18 @@ const TEXT_COLORS = [
   "#fbbc04", "#ff6d01", "#9334e6", "#e91e63", "#00bcd4",
 ];
 
+// Utility function to convert URLs to clickable links
+const linkifyText = (html: string): string => {
+  // URL regex pattern that matches http, https, and www URLs
+  const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/g;
+  
+  return html.replace(urlPattern, (url) => {
+    // Add protocol if missing (for www. links)
+    const href = url.startsWith('www.') ? `https://${url}` : url;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: #1a73e8; text-decoration: underline;">${url}</a>`;
+  });
+};
+
 export default function CommentForm({
   onSubmit,
   onCancel,
@@ -56,8 +68,11 @@ export default function CommentForm({
       // Get the HTML content from the editor
       const htmlContent = editorRef.current?.innerHTML || "";
       
+      // Convert plain URLs to clickable links
+      const linkifiedContent = linkifyText(htmlContent);
+      
       await onSubmit({
-        content: htmlContent.trim(),
+        content: linkifiedContent.trim(),
         positionX: initialData?.positionX || 0,
         positionY: initialData?.positionY || 0,
       });
