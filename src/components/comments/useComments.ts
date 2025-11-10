@@ -63,8 +63,20 @@ export function useComments({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create comment");
+        let errorMessage = "Failed to create comment";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // If response is not JSON, try to get text or use status text
+          try {
+            const text = await response.text();
+            errorMessage = text || response.statusText || errorMessage;
+          } catch {
+            errorMessage = response.statusText || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const newComment = await response.json();
@@ -97,14 +109,26 @@ export function useComments({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        let errorMessage = `Failed to update comment (${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, try to get text or use status text
+          try {
+            const text = await response.text();
+            errorMessage = text || response.statusText || errorMessage;
+          } catch (textError) {
+            errorMessage = response.statusText || errorMessage;
+          }
+        }
         console.error("Update comment API error:", {
           status: response.status,
           statusText: response.statusText,
-          errorData,
+          errorMessage,
           requestData: data
         });
-        throw new Error(errorData.error || `Failed to update comment (${response.status})`);
+        throw new Error(errorMessage);
       }
 
       const updatedComment = await response.json();
@@ -139,8 +163,20 @@ export function useComments({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete comment");
+        let errorMessage = "Failed to delete comment";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, try to get text or use status text
+          try {
+            const text = await response.text();
+            errorMessage = text || response.statusText || errorMessage;
+          } catch (textError) {
+            errorMessage = response.statusText || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       setComments(prev => prev.filter(comment => comment.id !== commentId));

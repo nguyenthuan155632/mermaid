@@ -39,6 +39,7 @@ export default function SharePage() {
     id: string;
     title: string;
     code: string;
+    anonymousMode: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -61,7 +62,7 @@ export default function SharePage() {
     sendCommentUpdated,
     sendCommentDeleted,
     sendCommentResolved,
-  } = useWebSocket(diagram?.id || null);
+  } = useWebSocket(diagram?.id || null, diagram?.anonymousMode || false);
 
   // WebSocket comment broadcast callbacks - use useCallback with empty deps since sendCommentXXX use refs internally
   const handleCommentCreated = useCallback((comment: unknown) => {
@@ -146,8 +147,9 @@ export default function SharePage() {
   }, [diagram?.id, refreshComments]);
 
   const handleCommentModeToggle = () => {
-    if (!session) {
-      // User is not logged in, redirect to login page with callback URL
+    // Allow commenting if user is logged in OR if diagram is in anonymous mode
+    if (!session && !diagram?.anonymousMode) {
+      // User is not logged in and diagram is not in anonymous mode, redirect to login
       const currentUrl = window.location.href;
       window.location.href = `/login?callbackUrl=${encodeURIComponent(currentUrl)}`;
       return;
@@ -185,7 +187,9 @@ export default function SharePage() {
 
   const commentButtonTitle = session
     ? (isCommentMode ? "Exit Comment Mode" : "Comment Mode")
-    : "Login to enable comments";
+    : diagram?.anonymousMode
+      ? (isCommentMode ? "Exit Comment Mode" : "Comment Mode")
+      : "Login to enable comments";
 
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
@@ -261,7 +265,7 @@ export default function SharePage() {
                     color={isCommentMode ? "secondary" : "primary"}
                     size="small"
                   >
-                    {session ? <Comment fontSize="small" /> : <Login fontSize="small" />}
+                    {session || diagram?.anonymousMode ? <Comment fontSize="small" /> : <Login fontSize="small" />}
                   </IconButton>
                 </span>
               </Tooltip>
@@ -304,10 +308,10 @@ export default function SharePage() {
                 <span>
                   <Button
                     variant={isCommentMode ? "contained" : "outlined"}
-                    startIcon={session ? <Comment /> : <Login />}
+                    startIcon={session || diagram?.anonymousMode ? <Comment /> : <Login />}
                     onClick={handleCommentModeToggle}
                   >
-                    {session ? (isCommentMode ? "Commenting" : "Comments") : "Login to Comment"}
+                    {session ? (isCommentMode ? "Commenting" : "Comments") : diagram?.anonymousMode ? (isCommentMode ? "Commenting" : "Comments") : "Login to Comment"}
                   </Button>
                 </span>
               </Tooltip>
@@ -319,10 +323,11 @@ export default function SharePage() {
       <Box sx={{ flex: 1, position: "relative", bgcolor: "background.default" }}>
         {/* User Presence Indicator - positioned below zoom toolbar */}
         {isConnected && connectedUsers.size > 0 && (
-          <Box sx={{ position: "absolute", top: { xs: 70, md: 90 }, right: { xs: 15, md: 40 }, zIndex: 1000 }}>
+          <Box sx={{ position: "absolute", top: 90, right: 10, zIndex: 1000 }}>
             <UserPresence
               users={connectedUsers}
               currentUserId={session?.user?.id}
+              anonymousMode={diagram?.anonymousMode}
             />
           </Box>
         )}
@@ -333,6 +338,7 @@ export default function SharePage() {
           users={connectedUsers}
           currentUserId={session?.user?.id}
           editorRef={editorRef}
+          anonymousMode={diagram?.anonymousMode}
         />
 
         <Box
@@ -351,9 +357,9 @@ export default function SharePage() {
             comments={comments}
             threadedComments={threadedComments}
             selectedCommentId={selectedCommentId}
-            isCommentMode={isCommentMode && !!session}
+            isCommentMode={isCommentMode && (!!session || diagram?.anonymousMode)}
             onCommentClick={(commentId) => {
-              if (session) {
+              if (session || diagram?.anonymousMode) {
                 setSelectedCommentId(commentId);
                 handleCommentPanelOpen();
               }
@@ -364,6 +370,7 @@ export default function SharePage() {
             diagramId={diagram?.id}
             onCreateComment={createComment}
             currentUserId={session?.user?.id}
+            anonymousMode={diagram?.anonymousMode}
           />
         </Box>
         {detailsOpen && (
@@ -389,8 +396,9 @@ export default function SharePage() {
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   Anyone with this link can view the diagram and export it.
+                  {diagram?.anonymousMode && " Anonymous commenting is enabled."}
                 </Typography>
-                {!session && (
+                {!session && !diagram?.anonymousMode && (
                   <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
                     <a href={`/login?callbackUrl=${encodeURIComponent(window.location.href)}`} style={{ color: 'inherit', textDecoration: 'underline' }}>
                       Login to enable commenting features
@@ -432,6 +440,7 @@ export default function SharePage() {
         onCreateComment={createComment}
         currentUserId={session?.user?.id}
         diagramId={diagram?.id}
+        anonymousMode={diagram?.anonymousMode}
       />
     </Box >
   );

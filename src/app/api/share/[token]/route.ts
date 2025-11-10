@@ -14,6 +14,7 @@ export async function GET(
         id: diagrams.id,
         title: diagrams.title,
         code: diagrams.code,
+        anonymousMode: diagrams.anonymousMode,
       })
       .from(diagrams)
       .where(eq(diagrams.shareToken, token))
@@ -34,4 +35,3 @@ export async function GET(
     );
   }
 }
-

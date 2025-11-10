@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Box } from "@mui/material";
 import CommentIndicator from "./CommentIndicator";
 import CommentForm from "./CommentForm";
-import { CommentOverlayProps, ThreadedComment } from "./types";
+import { CommentOverlayProps, ThreadedComment, CommentFormData } from "./types";
 
 export default function CommentOverlay({
   threadedComments = [],
@@ -19,7 +19,12 @@ export default function CommentOverlay({
   onCreateComment,
   onPopupClick,
   onUpdateCommentPosition,
-}: CommentOverlayProps) {
+  currentUserId,
+  anonymousMode,
+}: CommentOverlayProps & {
+  currentUserId?: string;
+  anonymousMode?: boolean;
+}) {
   const [pendingCommentPosition, setPendingCommentPosition] = useState<{ x: number; y: number } | null>(null);
   const [isAddingComment, setIsAddingComment] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,7 +51,7 @@ export default function CommentOverlay({
     setIsAddingComment(true);
   };
 
-  const handleCommentSubmit = async (data: { content: string; positionX: number; positionY: number }) => {
+  const handleCommentSubmit = async (data: CommentFormData) => {
     if (pendingCommentPosition) {
       // Create the comment
       if (onCreateComment) {
@@ -54,6 +59,7 @@ export default function CommentOverlay({
           content: data.content,
           positionX: data.positionX,
           positionY: data.positionY,
+          isAnonymous: anonymousMode || !currentUserId,
         });
       }
 
@@ -123,6 +129,7 @@ export default function CommentOverlay({
                 await onUpdateCommentPosition(thread.id, position);
               }
             }}
+            anonymousMode={anonymousMode}
           />
         </Box>
       ))}
@@ -150,6 +157,7 @@ export default function CommentOverlay({
               positionY: pendingCommentPosition.y,
             }}
             isEditing={false}
+            anonymousMode={anonymousMode}
           />
         </Box>
       )}

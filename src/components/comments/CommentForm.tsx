@@ -31,7 +31,7 @@ const TEXT_COLORS = [
 const linkifyText = (html: string): string => {
   // URL regex pattern that matches http, https, and www URLs
   const urlPattern = /(https?:\/\/[^\s<]+|www\.[^\s<]+)/g;
-  
+
   return html.replace(urlPattern, (url) => {
     // Add protocol if missing (for www. links)
     const href = url.startsWith('www.') ? `https://${url}` : url;
@@ -47,6 +47,7 @@ export default function CommentForm({
   loading = false,
   placeholder,
   showCancelButton = true,
+  anonymousMode = false,
 }: CommentFormProps & { showCancelButton?: boolean }) {
   const [content, setContent] = useState(initialData?.content || "");
   const editorRef = useRef<HTMLDivElement>(null);
@@ -67,14 +68,15 @@ export default function CommentForm({
     try {
       // Get the HTML content from the editor
       const htmlContent = editorRef.current?.innerHTML || "";
-      
+
       // Convert plain URLs to clickable links
       const linkifiedContent = linkifyText(htmlContent);
-      
+
       await onSubmit({
         content: linkifiedContent.trim(),
         positionX: initialData?.positionX || 0,
         positionY: initialData?.positionY || 0,
+        isAnonymous: anonymousMode,
       });
       // Clear form after successful submission
       setContent("");

@@ -37,6 +37,7 @@ export const diagrams = pgTable(
     code: text("code").notNull(),
     description: text("description"),
     isPublic: boolean("is_public").default(false).notNull(),
+    anonymousMode: boolean("anonymous_mode").default(false).notNull(),
     shareToken: text("share_token").unique(),
     exportToken: text("export_token").unique(),
     exportCodeHash: text("export_code_hash"),
@@ -104,8 +105,8 @@ export const comments = pgTable("comments", {
     .notNull()
     .references(() => diagrams.id, { onDelete: "cascade" }),
   userId: uuid("user_id")
-    .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  isAnonymous: boolean("is_anonymous").default(false).notNull(),
   parentId: uuid("parent_id"),
   content: text("content").notNull(),
   positionX: real("position_x").notNull(),

@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { comments, users } from "@/db/schema";
+import { comments, users, diagrams } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { z } from "zod";
+import { v4 as uuidv4 } from "uuid";
 
 const createCommentSchema = z.object({
   content: z.string().min(1, "Comment content is required"),
   positionX: z.number(),
   positionY: z.number(),
   parentId: z.string().optional(),
+  isAnonymous: z.boolean().optional(),
 });
 
 export async function GET(
@@ -17,11 +19,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: diagramId } = await params;
 
     const commentsData = await db
@@ -32,6 +29,7 @@ export async function GET(
         positionY: comments.positionY,
         isResolved: comments.isResolved,
         parentId: comments.parentId,
+        isAnonymous: comments.isAnonymous,
         createdAt: comments.createdAt,
         updatedAt: comments.updatedAt,
         user: {
@@ -49,6 +47,8 @@ export async function GET(
       ...comment,
       createdAt: comment.createdAt.toISOString(),
       updatedAt: comment.updatedAt.toISOString(),
+      // For anonymous comments, provide a default user object
+      user: comment.isAnonymous ? { id: 'anonymous', email: 'Anonymous' } : comment.user,
     }));
 
     return NextResponse.json({ items: serializedComments });
@@ -65,20 +65,40 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: diagramId } = await params;
     const body = await request.json();
     const validatedData = createCommentSchema.parse(body);
+
+    // Check if diagram allows anonymous comments
+    const [diagram] = await db
+      .select({ anonymousMode: diagrams.anonymousMode })
+      .from(diagrams)
+      .where(eq(diagrams.id, diagramId))
+      .limit(1);
+
+    if (!diagram) {
+      return NextResponse.json({ error: "Diagram not found" }, { status: 404 });
+    }
+
+    const session = await auth();
+    const isAnonymousRequest = validatedData.isAnonymous || !session?.user?.id;
+
+    // Allow anonymous comments only if diagram is in anonymous mode
+    if (isAnonymousRequest && !diagram.anonymousMode) {
+      return NextResponse.json({ error: "Anonymous comments not allowed" }, { status: 401 });
+    }
+
+    // For authenticated users, require session unless diagram is in anonymous mode
+    if (!isAnonymousRequest && !session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const [newComment] = await db
       .insert(comments)
       .values({
         diagramId,
-        userId: session.user.id,
+        userId: isAnonymousRequest ? null : (session?.user?.id || null),
+        isAnonymous: isAnonymousRequest,
         content: validatedData.content,
         positionX: validatedData.positionX,
         positionY: validatedData.positionY,
@@ -95,6 +115,7 @@ export async function POST(
         positionY: comments.positionY,
         isResolved: comments.isResolved,
         parentId: comments.parentId,
+        isAnonymous: comments.isAnonymous,
         createdAt: comments.createdAt,
         updatedAt: comments.updatedAt,
         user: {
@@ -112,6 +133,8 @@ export async function POST(
       ...commentWithUser,
       createdAt: commentWithUser.createdAt.toISOString(),
       updatedAt: commentWithUser.updatedAt.toISOString(),
+      // For anonymous comments, provide a default user object
+      user: commentWithUser.isAnonymous ? { id: 'anonymous', email: 'Anonymous' } : commentWithUser.user,
     };
 
     return NextResponse.json(serializedComment);

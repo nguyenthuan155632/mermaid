@@ -18,6 +18,7 @@ const createDiagramSchema = z.object({
   title: z.string().min(1, "Title is required"),
   code: z.string(),
   description: z.string().optional(),
+  anonymousMode: z.boolean().optional().default(false),
 });
 
 export async function POST(request: Request) {
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
         title: validatedData.title,
         code: validatedData.code,
         description: validatedData.description || null,
+        anonymousMode: validatedData.anonymousMode,
       })
       .returning();
 

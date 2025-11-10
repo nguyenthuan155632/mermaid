@@ -100,6 +100,7 @@ const ThreadCommentRenderer: React.FC<{
   refreshComments?: () => Promise<void>;
   isThreadResolved?: boolean; // New prop to track if the entire thread is resolved
   canResolveThread?: boolean;
+  anonymousMode?: boolean;
 }> = ({
   comment,
   threadRoot,
@@ -116,17 +117,17 @@ const ThreadCommentRenderer: React.FC<{
   onCreateComment,
   onSetEditingCommentId,
   onSetReplyingToCommentId,
-  diagramId,
   loading,
   refreshComments,
   isThreadResolved = false,
   canResolveThread = false,
+  anonymousMode = false,
 }) => {
     // Silence linter warnings for reserved props
     void depth;
     void ancestorHasNextSibling;
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const isAuthor = currentUserId === comment.user.id;
+    const isAuthor = currentUserId === comment.user?.id;
     const timestampLabel = `${formatRelativeTime(comment.createdAt)}${comment.updatedAt !== comment.createdAt ? " · edited" : ""
       }`;
 
@@ -255,7 +256,7 @@ const ThreadCommentRenderer: React.FC<{
               marginLeft: "-12px",
             }}
           >
-            {comment.user.email.charAt(0).toUpperCase()}
+            ?
           </Avatar>
 
           <Box
@@ -276,7 +277,7 @@ const ThreadCommentRenderer: React.FC<{
                     lineHeight: "18px",
                   }}
                 >
-                  {comment.user.email}
+                  {anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown")}
                 </Typography>
                 <Typography
                   variant="caption"
@@ -459,7 +460,7 @@ const ThreadCommentRenderer: React.FC<{
                       onSetReplyingToCommentId(null);
                     }
                   }}
-                  placeholder={`Replying to ${comment.user.email}...`}
+                  placeholder="Replying to Anonymous..."
                   loading={loading}
                 />
               </Box>
@@ -483,84 +484,84 @@ const ThreadCommentRenderer: React.FC<{
               },
             }}
           >
-          {/* Only show Reply menu item if depth is less than MAX_COMMENT_DEPTH */}
-          {canReply && (
-            <MenuItem
-              onClick={() => {
-                if (isThreadResolved) return;
-                if (onSetReplyingToCommentId) {
-                  onSetReplyingToCommentId(comment.id);
-                }
-              }}
-              sx={{
-                fontSize: "13px",
-                color: notionPalette.textPrimary,
-                py: 0.75,
-                "&:hover": { bgcolor: notionPalette.accent },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: "28px" }}>
-                <ReplyIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
-              </ListItemIcon>
-              Reply
-            </MenuItem>
-          )}
+            {/* Only show Reply menu item if depth is less than MAX_COMMENT_DEPTH */}
+            {canReply && (
+              <MenuItem
+                onClick={() => {
+                  if (isThreadResolved) return;
+                  if (onSetReplyingToCommentId) {
+                    onSetReplyingToCommentId(comment.id);
+                  }
+                }}
+                sx={{
+                  fontSize: "13px",
+                  color: notionPalette.textPrimary,
+                  py: 0.75,
+                  "&:hover": { bgcolor: notionPalette.accent },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "28px" }}>
+                  <ReplyIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
+                </ListItemIcon>
+                Reply
+              </MenuItem>
+            )}
 
-          {canEdit && (
-            <MenuItem
-              onClick={handleEdit}
-              sx={{
-                fontSize: "13px",
-                color: notionPalette.textPrimary,
-                py: 0.75,
-                "&:hover": { bgcolor: notionPalette.accent },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: "28px" }}>
-                <EditIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
-              </ListItemIcon>
-              Edit
-            </MenuItem>
-          )}
+            {canEdit && (
+              <MenuItem
+                onClick={handleEdit}
+                sx={{
+                  fontSize: "13px",
+                  color: notionPalette.textPrimary,
+                  py: 0.75,
+                  "&:hover": { bgcolor: notionPalette.accent },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "28px" }}>
+                  <EditIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
+                </ListItemIcon>
+                Edit
+              </MenuItem>
+            )}
 
-          {canResolveMenu && (
-            <MenuItem
-              onClick={handleToggleResolved}
-              sx={{
-                fontSize: "13px",
-                color: notionPalette.textPrimary,
-                py: 0.75,
-                "&:hover": { bgcolor: notionPalette.accent },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: "28px" }}>
-                {comment.isResolved ? (
-                  <UncheckedIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
-                ) : (
-                  <CheckCircleIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
-                )}
-              </ListItemIcon>
-              {comment.isResolved ? "Mark as unresolved" : "Mark as resolved"}
-            </MenuItem>
-          )}
+            {canResolveMenu && (
+              <MenuItem
+                onClick={handleToggleResolved}
+                sx={{
+                  fontSize: "13px",
+                  color: notionPalette.textPrimary,
+                  py: 0.75,
+                  "&:hover": { bgcolor: notionPalette.accent },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "28px" }}>
+                  {comment.isResolved ? (
+                    <UncheckedIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
+                  ) : (
+                    <CheckCircleIcon fontSize="small" sx={{ color: notionPalette.textSecondary }} />
+                  )}
+                </ListItemIcon>
+                {comment.isResolved ? "Mark as unresolved" : "Mark as resolved"}
+              </MenuItem>
+            )}
 
-          {isAuthor && isDeleteEnabled && (
-            <MenuItem
-              onClick={handleDelete}
-              sx={{
-                fontSize: "13px",
-                color: "#C62828",
-                py: 0.75,
-                "&:hover": { bgcolor: "#FDECEC" },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: "28px" }}>
-                <DeleteIcon fontSize="small" sx={{ color: "#C62828" }} />
-              </ListItemIcon>
-              Delete
-            </MenuItem>
-          )}
-        </Menu>
+            {isAuthor && isDeleteEnabled && (
+              <MenuItem
+                onClick={handleDelete}
+                sx={{
+                  fontSize: "13px",
+                  color: "#C62828",
+                  py: 0.75,
+                  "&:hover": { bgcolor: "#FDECEC" },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: "28px" }}>
+                  <DeleteIcon fontSize="small" sx={{ color: "#C62828" }} />
+                </ListItemIcon>
+                Delete
+              </MenuItem>
+            )}
+          </Menu>
         )}
       </>
     );
@@ -587,6 +588,7 @@ const ThreadRenderer: React.FC<{
   refreshComments?: () => Promise<void>;
   isThreadResolved?: boolean; // New prop to track if entire thread is resolved
   canResolveThread?: boolean;
+  anonymousMode?: boolean;
 }> = ({
   threadedComment,
   threadRoot,
@@ -606,6 +608,7 @@ const ThreadRenderer: React.FC<{
   refreshComments,
   isThreadResolved = false,
   canResolveThread = false,
+  anonymousMode = false,
 }) => {
     const hasReplies = threadedComment.replies && threadedComment.replies.length > 0;
 
@@ -632,6 +635,7 @@ const ThreadRenderer: React.FC<{
           refreshComments={refreshComments}
           isThreadResolved={isThreadResolved}
           canResolveThread={canResolveThread}
+          anonymousMode={anonymousMode}
         />
 
         {/* Render replies with indentation for visual hierarchy */}
@@ -666,6 +670,7 @@ const ThreadRenderer: React.FC<{
                   refreshComments={refreshComments}
                   isThreadResolved={isThreadResolved}
                   canResolveThread={canResolveThread}
+                  anonymousMode={anonymousMode}
                 />
               </Box>
             );
@@ -687,6 +692,7 @@ export default function CommentPanel({
   onCreateComment,
   currentUserId,
   diagramId,
+  anonymousMode = false,
 }: CommentPanelProps) {
   const commentsListRef = useRef<HTMLDivElement>(null);
 
@@ -904,7 +910,7 @@ export default function CommentPanel({
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {threadedComments.map((threadedComment) => {
                 const isThreadResolved = threadedComment.isResolved;
-                const rootCommentAuthorId = threadedComment.user.id;
+                const rootCommentAuthorId = threadedComment.user?.id;
                 const isThreadOwner = !!currentUserId && currentUserId === rootCommentAuthorId;
 
                 return (
@@ -926,6 +932,7 @@ export default function CommentPanel({
                       refreshComments={refreshComments}
                       isThreadResolved={isThreadResolved}
                       canResolveThread={isThreadOwner}
+                      anonymousMode={anonymousMode}
                     />
 
                     {/* Thread Resolved Message */}

@@ -103,6 +103,7 @@ function EditorContent() {
   const [snapshotsLoading, setSnapshotsLoading] = useState(false);
   const [revertingSnapshotId, setRevertingSnapshotId] = useState<string | null>(null);
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [anonymousMode, setAnonymousMode] = useState(false);
   const [sidebarSections, setSidebarSections] = useState({
     samples: false,
     actions: false,
@@ -127,7 +128,7 @@ function EditorContent() {
     sendCommentUpdated,
     sendCommentDeleted,
     sendCommentResolved,
-  } = useWebSocket(diagramId);
+  } = useWebSocket(diagramId, anonymousMode);
 
   // Comment-related state
   const [isCommentMode, setIsCommentMode] = useState(false);
@@ -327,6 +328,7 @@ function EditorContent() {
           setDiagramId(data.id);
           setTitle(data.title);
           setCode(data.code);
+          setAnonymousMode(data.anonymousMode || false);
           fetchSnapshots(data.id);
           return true;
         }
@@ -457,6 +459,7 @@ function EditorContent() {
         body: JSON.stringify({
           title,
           code,
+          anonymousMode,
         }),
       });
 
@@ -1026,6 +1029,16 @@ function EditorContent() {
                     >
                       Embed
                     </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Comment />}
+                      onClick={() => setAnonymousMode(!anonymousMode)}
+                      size="small"
+                      fullWidth
+                      color={anonymousMode ? "secondary" : "primary"}
+                    >
+                      {anonymousMode ? "Anonymous Mode On" : "Anonymous Mode Off"}
+                    </Button>
                     {hasError && (
                       <Button
                         variant="outlined"
@@ -1121,6 +1134,7 @@ function EditorContent() {
               <UserPresence
                 users={connectedUsers}
                 currentUserId={session?.user?.id}
+                anonymousMode={anonymousMode}
               />
             </Box>
           )}
@@ -1131,6 +1145,7 @@ function EditorContent() {
             users={connectedUsers}
             currentUserId={session?.user?.id}
             editorRef={editorRef}
+            anonymousMode={anonymousMode}
           />
 
           <MermaidRenderer
@@ -1159,6 +1174,7 @@ function EditorContent() {
             diagramId={diagramId || undefined}
             onCreateComment={createComment}
             currentUserId={session?.user?.id}
+            anonymousMode={anonymousMode}
           />
         </Box>
       </Box>
@@ -1610,6 +1626,7 @@ function EditorContent() {
         }}
         onCreateComment={createComment}
         currentUserId={session?.user?.id}
+        anonymousMode={anonymousMode}
       />
 
       {/* Markdown Embed Dialog */}

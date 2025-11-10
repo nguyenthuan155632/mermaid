@@ -36,7 +36,8 @@ wss.on('connection', (ws, request) => {
             id: message.data.userId || userId,
             name: message.data.userName,
             email: message.data.userEmail,
-            image: message.data.userImage
+            image: message.data.userImage,
+            isAnonymous: message.data.isAnonymous || false
           };
 
           console.log(`👤 User ${userId} (${userInfo.name || userInfo.email}) joined diagram ${diagramId}`);

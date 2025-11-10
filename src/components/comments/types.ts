@@ -23,6 +23,7 @@ export interface CommentFormData {
   positionX: number;
   positionY: number;
   parentId?: string;
+  isAnonymous?: boolean;
 }
 
 export interface CommentModeState {
@@ -48,6 +49,7 @@ export interface CommentIndicatorProps {
   onDrag?: (position: CommentPosition) => void;
   onDragEnd?: (position: CommentPosition) => void;
   getContainerRect?: () => DOMRect | null;
+  anonymousMode?: boolean;
 }
 
 export interface CommentFormProps {
@@ -57,6 +59,7 @@ export interface CommentFormProps {
   isEditing?: boolean;
   loading?: boolean;
   placeholder?: string;
+  anonymousMode?: boolean;
 }
 
 export interface CommentThreadProps {
@@ -69,6 +72,7 @@ export interface CommentThreadProps {
   onReply?: (parentId: string) => void;
   currentUserId?: string;
   depth?: number;
+  anonymousMode?: boolean;
 }
 
 export interface CommentPanelProps {
@@ -84,6 +88,7 @@ export interface CommentPanelProps {
   onCreateComment: (data: CommentFormData) => Promise<void>;
   currentUserId?: string;
   diagramId?: string;
+  anonymousMode?: boolean;
 }
 
 export interface CommentOverlayProps {
@@ -98,9 +103,10 @@ export interface CommentOverlayProps {
   diagramId?: string;
   isPanning?: boolean;
   isPinching?: boolean;
-  onCreateComment?: (data: { content: string; positionX: number; positionY: number }) => Promise<void>;
+  onCreateComment?: (data: { content: string; positionX: number; positionY: number; isAnonymous?: boolean }) => Promise<void>;
   onPopupClick?: (commentId: string) => void;
   onUpdateCommentPosition?: (commentId: string, position: CommentPosition) => Promise<void>;
+  anonymousMode?: boolean;
 }
 
 export interface UseCommentsOptions {

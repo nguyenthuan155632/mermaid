@@ -7,6 +7,7 @@ interface LiveCursorsProps {
   users: Map<string, UserInfo>;
   currentUserId: string | undefined;
   editorRef: RefObject<HTMLElement | null>;
+  anonymousMode?: boolean;
 }
 
 interface CursorWithPosition {
@@ -16,7 +17,7 @@ interface CursorWithPosition {
   color: string;
 }
 
-export function LiveCursors({ cursors, users, currentUserId, editorRef }: LiveCursorsProps) {
+export function LiveCursors({ cursors, users, currentUserId, editorRef, anonymousMode = false }: LiveCursorsProps) {
   const [cursorPositions, setCursorPositions] = useState<CursorWithPosition[]>([]);
 
   useEffect(() => {
@@ -93,10 +94,11 @@ export function LiveCursors({ cursors, users, currentUserId, editorRef }: LiveCu
       }}
     >
       {cursorPositions.map(({ userId, userInfo, position, color }) => {
+        const isAnonymousUser = anonymousMode || userInfo.isAnonymous;
         return (
           <Tooltip
             key={userId}
-            title={userInfo.name || userInfo.email || 'Anonymous'}
+            title={isAnonymousUser ? "Anonymous User" : (userInfo.name || userInfo.email || 'Anonymous')}
             placement="top"
             arrow
             componentsProps={{
@@ -137,8 +139,8 @@ export function LiveCursors({ cursors, users, currentUserId, editorRef }: LiveCu
 
               {/* User avatar */}
               <Avatar
-                src={userInfo.image}
-                alt={userInfo.name || userInfo.email || 'Anonymous'}
+                src={isAnonymousUser ? undefined : userInfo.image}
+                alt={isAnonymousUser ? "Anonymous User" : (userInfo.name || userInfo.email || 'Anonymous')}
                 sx={{
                   width: 20,
                   height: 20,
@@ -146,9 +148,10 @@ export function LiveCursors({ cursors, users, currentUserId, editorRef }: LiveCu
                   border: `2px solid ${color}`,
                   marginLeft: 0.5,
                   boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                  backgroundColor: isAnonymousUser ? "grey.500" : undefined,
                 }}
               >
-                {getUserInitials(userInfo)}
+                {getUserInitials({ ...userInfo, isAnonymous: isAnonymousUser })}
               </Avatar>
             </Box>
           </Tooltip>
@@ -182,6 +185,11 @@ function getUserColor(userId: string): string {
 }
 
 function getUserInitials(user: UserInfo): string {
+  // Handle anonymous users
+  if (user.isAnonymous) {
+    return "A";
+  }
+
   if (user.name) {
     const names = user.name.trim().split(" ");
     if (names.length >= 2) {

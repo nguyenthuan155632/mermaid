@@ -5,9 +5,10 @@ interface UserPresenceProps {
   users: Map<string, UserInfo>;
   currentUserId?: string;
   maxVisible?: number;
+  anonymousMode?: boolean;
 }
 
-export function UserPresence({ users, currentUserId, maxVisible = 3 }: UserPresenceProps) {
+export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMode = false }: UserPresenceProps) {
   // Convert Map to array and filter out current user
   const usersArray = Array.from(users.values());
   const otherUsers = usersArray.filter((user: UserInfo) => user.id !== currentUserId);
@@ -19,6 +20,7 @@ export function UserPresence({ users, currentUserId, maxVisible = 3 }: UserPrese
     totalUsers: usersArray.length,
     currentUserId,
     otherUsersCount: otherUsers.length,
+    anonymousMode,
     users: usersArray.map(u => ({ id: u.id, name: u.name, email: u.email }))
   });
 
@@ -43,29 +45,33 @@ export function UserPresence({ users, currentUserId, maxVisible = 3 }: UserPrese
       </Typography>
 
       {/* Visible user avatars */}
-      {visibleUsers.map((user: UserInfo, index: number) => (
-        <Tooltip
-          key={user.id || `user-${index}`}
-          title={user.name || user.email || 'Anonymous'}
-          placement="top"
-          arrow
-        >
-          <Avatar
-            src={user.image}
-            alt={user.name || user.email}
-            sx={{
-              width: 24,
-              height: 24,
-              fontSize: "0.75rem",
-              border: "2px solid white",
-              marginLeft: index > 0 ? -1 : 0,
-              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-            }}
+      {visibleUsers.map((user: UserInfo, index: number) => {
+        const isAnonymousUser = anonymousMode || user.isAnonymous;
+        return (
+          <Tooltip
+            key={user.id || `user-${index}`}
+            title={isAnonymousUser ? "Anonymous User" : (user.name || user.email || 'Anonymous')}
+            placement="top"
+            arrow
           >
-            {getUserInitials(user)}
-          </Avatar>
-        </Tooltip>
-      ))}
+            <Avatar
+              src={isAnonymousUser ? undefined : user.image}
+              alt={isAnonymousUser ? "Anonymous User" : (user.name || user.email)}
+              sx={{
+                width: 24,
+                height: 24,
+                fontSize: "0.75rem",
+                border: "2px solid white",
+                marginLeft: index > 0 ? -1 : 0,
+                boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                backgroundColor: isAnonymousUser ? "grey.500" : undefined,
+              }}
+            >
+              {getUserInitials({ ...user, isAnonymous: isAnonymousUser })}
+            </Avatar>
+          </Tooltip>
+        );
+      })}
 
       {/* Remaining users count */}
       {remainingCount > 0 && (
@@ -87,6 +93,11 @@ export function UserPresence({ users, currentUserId, maxVisible = 3 }: UserPrese
 }
 
 function getUserInitials(user: UserInfo): string {
+  // For anonymous users, always show "A"
+  if (user.isAnonymous) {
+    return "A";
+  }
+
   if (user.name) {
     const names = user.name.trim().split(" ");
     if (names.length >= 2) {

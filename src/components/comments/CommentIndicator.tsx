@@ -18,6 +18,7 @@ export default function CommentIndicator({
   onDrag,
   onDragEnd,
   getContainerRect,
+  anonymousMode = false,
 }: CommentIndicatorProps & { onSidebarClick?: () => void; onPopupClick?: () => void }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isContextMenuOpen = Boolean(anchorEl);
@@ -216,7 +217,7 @@ export default function CommentIndicator({
         title={
           <Box>
             <Box sx={{ fontWeight: "bold", mb: 0.5 }}>
-              {comment.user.email}
+              {anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown")}
             </Box>
             <Box sx={{ maxWidth: 200 }}>
               {comment.content.slice(0, 100)}

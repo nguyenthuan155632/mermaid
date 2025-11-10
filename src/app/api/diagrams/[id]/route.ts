@@ -9,6 +9,7 @@ const updateDiagramSchema = z.object({
   title: z.string().min(1, "Title is required").optional(),
   code: z.string().optional(),
   description: z.string().optional(),
+  anonymousMode: z.boolean().optional(),
 });
 
 export async function GET(

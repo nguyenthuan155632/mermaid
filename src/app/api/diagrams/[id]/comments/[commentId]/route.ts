@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { comments, users } from "@/db/schema";
+import { comments, users, diagrams } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { z } from "zod";
@@ -17,17 +17,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; commentId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { commentId } = await params;
+    const { id: diagramId, commentId } = await params;
     const body = await request.json();
-
     const validatedData = updateCommentSchema.parse(body);
 
-    // First check if the comment exists and belongs to the user
+    // Check if this is a position-only update (allowed for all users for collaboration)
+    const isPositionOnlyUpdate =
+      validatedData.positionX !== undefined &&
+      validatedData.positionY !== undefined &&
+      validatedData.content === undefined &&
+      validatedData.isResolved === undefined;
+
+    // First check if the comment exists
     const [existingComment] = await db
       .select()
       .from(comments)
@@ -38,16 +39,35 @@ export async function PUT(
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
-    // Check if this is a position-only update (allowed for all users for collaboration)
-    const isPositionOnlyUpdate =
-      validatedData.positionX !== undefined &&
-      validatedData.positionY !== undefined &&
-      validatedData.content === undefined &&
-      validatedData.isResolved === undefined;
+    // For position-only updates, check if diagram allows anonymous mode
+    if (isPositionOnlyUpdate) {
+      const [diagram] = await db
+        .select({ anonymousMode: diagrams.anonymousMode })
+        .from(diagrams)
+        .where(eq(diagrams.id, diagramId))
+        .limit(1);
 
-    // Only check ownership if updating content or resolved status
-    if (!isPositionOnlyUpdate && existingComment.userId !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      // If diagram is in anonymous mode, allow position updates without authentication
+      if (diagram?.anonymousMode) {
+        // Allow position update without authentication
+      } else {
+        // For non-anonymous diagrams, still require authentication for position updates
+        const session = await auth();
+        if (!session?.user?.id) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+      }
+    } else {
+      // For content or resolved status updates, always require authentication
+      const session = await auth();
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      // Only check ownership if updating content or resolved status
+      if (existingComment.userId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     // Update the comment

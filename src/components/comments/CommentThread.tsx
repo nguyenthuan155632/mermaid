@@ -36,10 +36,11 @@ export default function CommentThread({
   onReply,
   currentUserId,
   depth = 0,
+  anonymousMode = false,
 }: CommentThreadProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isReplying, setIsReplying] = useState(false);
-  const isAuthor = currentUserId === comment.user.id;
+  const isAuthor = currentUserId === comment.user?.id;
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -103,7 +104,7 @@ export default function CommentThread({
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  bgcolor: "#e8eaed",
+                  bgcolor: "#9e9e9e",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -112,7 +113,7 @@ export default function CommentThread({
                   color: "#5f6368",
                 }}
               >
-                {comment.user.email.charAt(0).toUpperCase()}
+                ?
               </Box>
               <Box>
                 <Typography variant="subtitle2" sx={{
@@ -121,7 +122,7 @@ export default function CommentThread({
                   fontSize: "14px",
                   lineHeight: "18px"
                 }}>
-                  {comment.user.email}
+                  {anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown")}
                 </Typography>
                 <Typography variant="caption" sx={{
                   color: "#5f6368",

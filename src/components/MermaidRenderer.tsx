@@ -42,6 +42,7 @@ interface MermaidRendererProps {
   diagramId?: string;
   onCreateComment?: (data: { content: string; positionX: number; positionY: number }) => Promise<void>;
   currentUserId?: string;
+  anonymousMode?: boolean;
 }
 
 const MERMAID_ERROR_PATTERNS = [/syntax error in text/i, /mermaid version/i];
@@ -62,6 +63,7 @@ export default function MermaidRenderer({
   diagramId,
   onCreateComment,
   currentUserId,
+  anonymousMode = false,
 }: MermaidRendererProps) {
   const { data: session } = useSession();
 
@@ -74,7 +76,7 @@ export default function MermaidRenderer({
     sendCommentUpdated,
     sendCommentDeleted,
     sendCommentResolved,
-  } = useWebSocket(diagramId || null);
+  } = useWebSocket(diagramId || null, anonymousMode);
 
   // Use the comments hook for real functionality with WebSocket callbacks
   const commentsHook = useComments({
@@ -217,22 +219,28 @@ export default function MermaidRenderer({
   }, [diagramId, popupComment, pan.x, pan.y, zoom, actualComments, hookUpdateComment]);
 
   const handleIndicatorDragEnd = useCallback(async (commentId: string, position: { x: number; y: number }) => {
+    console.log('[MermaidRenderer] handleIndicatorDragEnd called:', { commentId, position, diagramId });
+
     if (!diagramId) {
+      console.warn('[MermaidRenderer] handleIndicatorDragEnd - no diagramId');
       return;
     }
     const comment = actualComments.find((c) => c.id === commentId);
     if (!comment) {
+      console.warn('[MermaidRenderer] handleIndicatorDragEnd - comment not found:', commentId);
       return;
     }
 
     try {
       // Only send position update (allows all users to drag comments for collaboration)
+      console.log('[MermaidRenderer] Updating comment position via API...');
       await hookUpdateComment(commentId, {
         positionX: position.x,
         positionY: position.y,
       });
 
       // Send real-time update to other users
+      console.log('[MermaidRenderer] Sending position update via WebSocket...');
       sendCommentPosition({
         commentId,
         x: position.x,
@@ -1005,6 +1013,8 @@ export default function MermaidRenderer({
           onCreateComment={actualCreateComment || (async () => { })}
           onPopupClick={handlePopupClick}
           onUpdateCommentPosition={handleIndicatorDragEnd}
+          currentUserId={currentUserId}
+          anonymousMode={anonymousMode}
         />
       </Box>
       <Dialog
@@ -1159,6 +1169,7 @@ export default function MermaidRenderer({
           }}
           onDrag={handlePopupDrag}
           onDragEnd={handlePopupDragEnd}
+          anonymousMode={anonymousMode}
         />
       )}
     </>
