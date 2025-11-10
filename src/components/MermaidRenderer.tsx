@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import mermaid from "mermaid";
 import {
   Box,
@@ -22,6 +23,7 @@ import CommentOverlay from "./comments/CommentOverlay";
 import CommentPopup from "./comments/CommentPopup";
 import { CommentWithUser, ThreadedComment } from "./comments/types";
 import { useComments } from "./comments/useComments";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 interface MermaidRendererProps {
   code: string;
@@ -61,8 +63,39 @@ export default function MermaidRenderer({
   onCreateComment,
   currentUserId,
 }: MermaidRendererProps) {
-  // Use the comments hook for real functionality
-  const commentsHook = useComments({ diagramId: diagramId || "" });
+  const { data: session } = useSession();
+
+  // WebSocket hook for real-time comment synchronization (initialize first to get callbacks)
+  const {
+    sendCommentPosition,
+    commentPositions,
+    lastCommentEvent,
+    sendCommentCreated,
+    sendCommentUpdated,
+    sendCommentDeleted,
+    sendCommentResolved,
+  } = useWebSocket(diagramId || null);
+
+  // Use the comments hook for real functionality with WebSocket callbacks
+  const commentsHook = useComments({
+    diagramId: diagramId || "",
+    onCommentCreated: (comment) => {
+      console.log('[MermaidRenderer] onCommentCreated callback triggered:', comment.id);
+      sendCommentCreated({ commentId: comment.id, comment });
+    },
+    onCommentUpdated: (comment) => {
+      console.log('[MermaidRenderer] onCommentUpdated callback triggered:', comment.id);
+      sendCommentUpdated({ commentId: comment.id, comment });
+    },
+    onCommentDeleted: (commentId) => {
+      console.log('[MermaidRenderer] onCommentDeleted callback triggered:', commentId);
+      sendCommentDeleted({ commentId });
+    },
+    onCommentResolved: (commentId, isResolved) => {
+      console.log('[MermaidRenderer] onCommentResolved callback triggered:', commentId, isResolved);
+      sendCommentResolved({ commentId, isResolved });
+    },
+  });
   const {
     comments: hookComments,
     threadedComments: hookThreadedComments,
@@ -70,6 +103,7 @@ export default function MermaidRenderer({
     updateComment: hookUpdateComment,
     deleteComment: hookDeleteComment,
     toggleResolved: hookToggleResolved,
+    refreshComments,
   } = commentsHook;
 
   // Use hook data if available, otherwise fall back to props
@@ -192,15 +226,22 @@ export default function MermaidRenderer({
     }
 
     try {
+      // Only send position update (allows all users to drag comments for collaboration)
       await hookUpdateComment(commentId, {
-        content: comment.content,
         positionX: position.x,
         positionY: position.y,
+      });
+
+      // Send real-time update to other users
+      sendCommentPosition({
+        commentId,
+        x: position.x,
+        y: position.y,
       });
     } catch (error) {
       console.error("Failed to move comment:", error);
     }
-  }, [actualComments, diagramId, hookUpdateComment]);
+  }, [actualComments, diagramId, hookUpdateComment, sendCommentPosition]);
 
   const findThreadRootForComment = useCallback(
     (commentId: string): ThreadedComment | null => {
@@ -270,7 +311,48 @@ export default function MermaidRenderer({
         } : null);
       }
     }
+    // We only depend on popupComment?.comment.id, not the full popupComment object to avoid infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actualComments, actualThreadedComments, popupComment?.comment.id, findThreadRootForComment]);
+
+  // Listen for incoming comment events from WebSocket to refresh comments from other users
+  useEffect(() => {
+    if (!diagramId) return;
+
+    if (lastCommentEvent && lastCommentEvent.userId !== session?.user?.id) {
+      // Only refresh if the event is from another user
+      console.log(`[MermaidRenderer] Received ${lastCommentEvent.type} event for comment ${lastCommentEvent.event.commentId} from user ${lastCommentEvent.userId}`);
+      void refreshComments();
+    }
+  }, [lastCommentEvent, session?.user?.id, refreshComments, diagramId]);
+
+  // Merge WebSocket comment positions into threaded comments for real-time updates
+  const threadedCommentsWithPositions = useMemo(() => {
+    const positionKeys = Object.keys(commentPositions);
+    if (positionKeys.length === 0) {
+      return actualThreadedComments;
+    }
+
+    const mergePositions = (thread: ThreadedComment): ThreadedComment => {
+      const wsPosition = commentPositions[thread.id];
+      if (wsPosition) {
+        // Always use WebSocket position if available (it's the latest from other users)
+        return {
+          ...thread,
+          positionX: wsPosition.x,
+          positionY: wsPosition.y,
+          replies: thread.replies.map(mergePositions),
+        };
+      }
+      return {
+        ...thread,
+        replies: thread.replies.map(mergePositions),
+      };
+    };
+
+    return actualThreadedComments.map(mergePositions);
+  }, [actualThreadedComments, commentPositions]);
+
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
 
@@ -755,15 +837,6 @@ export default function MermaidRenderer({
     setIsFullscreen(false);
   };
 
-  // Handle comment click to show popup
-  const handleCommentClick = (commentId: string) => {
-    openPopupForComment(commentId);
-    // Also call the original handler if provided
-    if (onCommentClick) {
-      onCommentClick(commentId);
-    }
-  };
-
   // Handle sidebar click - only call the original handler
   const handleSidebarClick = (commentId: string) => {
     if (onCommentClick) {
@@ -919,7 +992,7 @@ export default function MermaidRenderer({
         {/* Comment Overlay */}
         <CommentOverlay
           comments={actualComments}
-          threadedComments={actualThreadedComments}
+          threadedComments={threadedCommentsWithPositions}
           selectedCommentId={selectedCommentId}
           zoom={zoom}
           pan={pan}

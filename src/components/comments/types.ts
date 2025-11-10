@@ -105,6 +105,10 @@ export interface CommentOverlayProps {
 
 export interface UseCommentsOptions {
   diagramId: string;
+  onCommentCreated?: (comment: CommentWithUser) => void;
+  onCommentUpdated?: (comment: CommentWithUser) => void;
+  onCommentDeleted?: (commentId: string) => void;
+  onCommentResolved?: (commentId: string, isResolved: boolean) => void;
 }
 
 export interface UseCommentsReturn {

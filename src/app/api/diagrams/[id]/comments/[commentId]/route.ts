@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { z } from "zod";
 
 const updateCommentSchema = z.object({
-  content: z.string().min(1, "Comment content is required"),
+  content: z.string().min(1, "Comment content is required").optional(),
   positionX: z.number().optional(),
   positionY: z.number().optional(),
   isResolved: z.boolean().optional(),
@@ -38,7 +38,15 @@ export async function PUT(
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
-    if (existingComment.userId !== session.user.id) {
+    // Check if this is a position-only update (allowed for all users for collaboration)
+    const isPositionOnlyUpdate =
+      validatedData.positionX !== undefined &&
+      validatedData.positionY !== undefined &&
+      validatedData.content === undefined &&
+      validatedData.isResolved === undefined;
+
+    // Only check ownership if updating content or resolved status
+    if (!isPositionOnlyUpdate && existingComment.userId !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -46,7 +54,7 @@ export async function PUT(
     const [updatedComment] = await db
       .update(comments)
       .set({
-        content: validatedData.content,
+        ...(validatedData.content !== undefined && { content: validatedData.content }),
         ...(validatedData.positionX !== undefined && { positionX: validatedData.positionX }),
         ...(validatedData.positionY !== undefined && { positionY: validatedData.positionY }),
         ...(validatedData.isResolved !== undefined && { isResolved: validatedData.isResolved }),
@@ -132,7 +140,7 @@ export async function DELETE(
     await db.delete(comments).where(eq(comments.id, commentId));
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to delete comment" },
       { status: 500 }

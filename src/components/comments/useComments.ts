@@ -9,11 +9,20 @@ import {
   UseCommentsReturn
 } from "./types";
 
-export function useComments({ diagramId }: UseCommentsOptions): UseCommentsReturn {
+export function useComments({
+  diagramId,
+  onCommentCreated,
+  onCommentUpdated,
+  onCommentDeleted,
+  onCommentResolved,
+}: UseCommentsOptions): UseCommentsReturn {
   const [comments, setComments] = useState<CommentWithUser[]>([]);
   const [threadedComments, setThreadedComments] = useState<ThreadedComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Callbacks are now directly used in the dependency arrays of useCallback
+  // This ensures they're always current and properly wired through the WebSocket integration
 
   const fetchComments = useCallback(async () => {
     if (!diagramId) {
@@ -40,7 +49,9 @@ export function useComments({ diagramId }: UseCommentsOptions): UseCommentsRetur
   }, [diagramId]);
 
   const createComment = useCallback(async (data: CommentFormData) => {
-    if (!diagramId) return;
+    if (!diagramId) {
+      return;
+    }
 
     try {
       const response = await fetch(`/api/diagrams/${diagramId}/comments`, {
@@ -58,12 +69,17 @@ export function useComments({ diagramId }: UseCommentsOptions): UseCommentsRetur
 
       const newComment = await response.json();
       setComments(prev => [...prev, newComment]);
+
+      // Broadcast comment creation via WebSocket callback
+      if (onCommentCreated) {
+        onCommentCreated(newComment);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
       throw err;
     }
-  }, [diagramId]);
+  }, [diagramId, onCommentCreated]);
 
   const updateComment = useCallback(async (
     commentId: string,
@@ -97,12 +113,22 @@ export function useComments({ diagramId }: UseCommentsOptions): UseCommentsRetur
           comment.id === commentId ? updatedComment : comment
         )
       );
+
+      // Broadcast comment update via WebSocket
+      if (onCommentUpdated) {
+        onCommentUpdated(updatedComment);
+      }
+
+      // If this was a resolve/unresolve action, also broadcast that specifically
+      if (data.isResolved !== undefined && onCommentResolved) {
+        onCommentResolved(commentId, data.isResolved);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
       throw err;
     }
-  }, [diagramId]);
+  }, [diagramId, onCommentUpdated, onCommentResolved]); // Include callbacks in dependencies
 
   const deleteComment = useCallback(async (commentId: string) => {
     if (!diagramId) return;
@@ -118,12 +144,17 @@ export function useComments({ diagramId }: UseCommentsOptions): UseCommentsRetur
       }
 
       setComments(prev => prev.filter(comment => comment.id !== commentId));
+
+      // Broadcast comment deletion via WebSocket
+      if (onCommentDeleted) {
+        onCommentDeleted(commentId);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
       throw err;
     }
-  }, [diagramId]);
+  }, [diagramId, onCommentDeleted]); // Include callback in dependencies
 
   const toggleResolved = useCallback(async (commentId: string) => {
     const comment = comments.find(c => c.id === commentId);

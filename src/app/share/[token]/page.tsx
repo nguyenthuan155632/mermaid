@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -27,6 +27,9 @@ import MermaidRenderer from "@/components/MermaidRenderer";
 import CommentPanel from "@/components/comments/CommentPanel";
 import { useComments } from "@/components/comments/useComments";
 import { exportToPNG, exportToSVG } from "@/lib/export";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { UserPresence } from "@/components/realtime/UserPresence";
+import { LiveCursors } from "@/components/realtime/LiveCursors";
 
 export default function SharePage() {
   const params = useParams();
@@ -47,7 +50,43 @@ export default function SharePage() {
   const [commentPanelOpen, setCommentPanelOpen] = useState(false);
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
 
-  // Initialize comments hook - only when we have a diagram ID
+  // WebSocket integration for real-time collaboration
+  const {
+    isConnected,
+    connectedUsers,
+    cursors,
+    lastCodeChange,
+    lastCommentEvent,
+    sendCommentCreated,
+    sendCommentUpdated,
+    sendCommentDeleted,
+    sendCommentResolved,
+  } = useWebSocket(diagram?.id || null);
+
+  // WebSocket comment broadcast callbacks - use useCallback with empty deps since sendCommentXXX use refs internally
+  const handleCommentCreated = useCallback((comment: unknown) => {
+    sendCommentCreated({
+      commentId: (comment as { id: string }).id,
+      comment
+    });
+  }, [sendCommentCreated]);
+
+  const handleCommentUpdated = useCallback((comment: unknown) => {
+    sendCommentUpdated({
+      commentId: (comment as { id: string }).id,
+      comment
+    });
+  }, [sendCommentUpdated]);
+
+  const handleCommentDeleted = useCallback((commentId: string) => {
+    sendCommentDeleted({ commentId });
+  }, [sendCommentDeleted]);
+
+  const handleCommentResolved = useCallback((commentId: string, isResolved: boolean) => {
+    sendCommentResolved({ commentId, isResolved });
+  }, [sendCommentResolved]);
+
+  // Initialize comments hook with WebSocket broadcast - only when we have a diagram ID
   const {
     comments,
     threadedComments,
@@ -56,7 +95,24 @@ export default function SharePage() {
     deleteComment,
     toggleResolved,
     refreshComments,
-  } = useComments({ diagramId: diagram?.id || "" });
+  } = useComments({
+    diagramId: diagram?.id || "",
+    onCommentCreated: handleCommentCreated,
+    onCommentUpdated: handleCommentUpdated,
+    onCommentDeleted: handleCommentDeleted,
+    onCommentResolved: handleCommentResolved,
+  });
+
+
+  // Compute the active code (realtime or original)
+  const activeCode = useMemo(() => {
+    if (lastCodeChange && lastCodeChange.userId !== session?.user?.id) {
+      return lastCodeChange.code;
+    }
+    return diagram?.code || "";
+  }, [lastCodeChange, session?.user?.id, diagram?.code]);
+
+  const editorRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -71,6 +127,15 @@ export default function SharePage() {
         .finally(() => setLoading(false));
     }
   }, [token]);
+
+  // Listen for incoming comment events from WebSocket
+  useEffect(() => {
+    if (lastCommentEvent && lastCommentEvent.userId !== session?.user?.id) {
+      // Only refresh if the event is from another user
+      console.log(`Received ${lastCommentEvent.type} event for comment ${lastCommentEvent.event.commentId} from user ${lastCommentEvent.userId}`);
+      void refreshComments();
+    }
+  }, [lastCommentEvent, session?.user?.id, refreshComments]);
 
   // Refresh comments when panel opens
   const handleCommentPanelOpen = useCallback(() => {
@@ -252,6 +317,24 @@ export default function SharePage() {
       </AppBar>
 
       <Box sx={{ flex: 1, position: "relative", bgcolor: "background.default" }}>
+        {/* User Presence Indicator - positioned below zoom toolbar */}
+        {isConnected && connectedUsers.size > 0 && (
+          <Box sx={{ position: "absolute", top: { xs: 70, md: 90 }, right: { xs: 15, md: 40 }, zIndex: 1000 }}>
+            <UserPresence
+              users={connectedUsers}
+              currentUserId={session?.user?.id}
+            />
+          </Box>
+        )}
+
+        {/* Live Cursors Overlay */}
+        <LiveCursors
+          cursors={cursors}
+          users={connectedUsers}
+          currentUserId={session?.user?.id}
+          editorRef={editorRef}
+        />
+
         <Box
           sx={{
             position: "absolute",
@@ -264,7 +347,7 @@ export default function SharePage() {
           }}
         >
           <MermaidRenderer
-            code={diagram.code}
+            code={activeCode}
             comments={comments}
             threadedComments={threadedComments}
             selectedCommentId={selectedCommentId}

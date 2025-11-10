@@ -123,3 +123,24 @@ export type SampleDiagram = typeof sampleDiagrams.$inferSelect;
 export type NewSampleDiagram = typeof sampleDiagrams.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
+
+export const diagramSessions = pgTable("diagram_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  diagramId: uuid("diagram_id")
+    .notNull()
+    .references(() => diagrams.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  socketId: text("socket_id").notNull(),
+  cursorPosition: text("cursor_position"), // JSON string with line, column info
+  lastSeen: timestamp("last_seen").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  diagramIdIdx: index("diagram_sessions_diagram_id_idx").on(table.diagramId),
+  userIdIdx: index("diagram_sessions_user_id_idx").on(table.userId),
+  socketIdIdx: index("diagram_sessions_socket_id_idx").on(table.socketId),
+}));
+
+export type DiagramSession = typeof diagramSessions.$inferSelect;
+export type NewDiagramSession = typeof diagramSessions.$inferInsert;

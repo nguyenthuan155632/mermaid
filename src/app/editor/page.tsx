@@ -57,6 +57,9 @@ import { exportToPNG, exportToSVG } from "@/lib/export";
 import { DiagramSnapshot } from "@/types";
 import { useComments } from "@/components/comments/useComments";
 import { useSession } from "next-auth/react";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { UserPresence } from "@/components/realtime/UserPresence";
+import { LiveCursors } from "@/components/realtime/LiveCursors";
 
 const LAST_DIAGRAM_ID_STORAGE_KEY = "mermaid-last-diagram-id";
 
@@ -112,13 +115,65 @@ function EditorContent() {
   const historySectionOpen = isMobile ? true : sidebarSections.history;
   const { data: session } = useSession();
 
+  // WebSocket integration
+  const {
+    isConnected,
+    connectedUsers,
+    lastCodeChange,
+    cursors,
+    lastCommentEvent,
+    sendCodeChange,
+    sendCommentCreated,
+    sendCommentUpdated,
+    sendCommentDeleted,
+    sendCommentResolved,
+  } = useWebSocket(diagramId);
+
   // Comment-related state
   const [isCommentMode, setIsCommentMode] = useState(false);
   const [commentPanelOpen, setCommentPanelOpen] = useState(false);
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
   const [rendererRevision, setRendererRevision] = useState(0);
+  const editorRef = useRef<HTMLElement | null>(null);
 
-  // Comment hooks
+  // WebSocket comment broadcast callbacks - use useCallback since sendCommentXXX use refs internally
+  const handleCommentCreated = useCallback((comment: unknown) => {
+    console.log('[Editor] handleCommentCreated called:', comment);
+    sendCommentCreated({
+      commentId: (comment as { id: string }).id,
+      comment
+    });
+  }, [sendCommentCreated]);
+
+  const handleCommentUpdated = useCallback((comment: unknown) => {
+    console.log('[Editor] handleCommentUpdated called:', comment);
+    sendCommentUpdated({
+      commentId: (comment as { id: string }).id,
+      comment
+    });
+  }, [sendCommentUpdated]);
+
+  const handleCommentDeleted = useCallback((commentId: string) => {
+    console.log('[Editor] handleCommentDeleted called:', commentId);
+    sendCommentDeleted({ commentId });
+  }, [sendCommentDeleted]);
+
+  const handleCommentResolved = useCallback((commentId: string, isResolved: boolean) => {
+    console.log('[Editor] handleCommentResolved called:', commentId, isResolved);
+    sendCommentResolved({ commentId, isResolved });
+  }, [sendCommentResolved]);
+
+  // Debug: Log callbacks before passing to useComments
+  console.warn('🚀🚀🚀 [Editor] Initializing useComments with callbacks:', {
+    diagramId,
+    hasHandleCommentCreated: !!handleCommentCreated,
+    hasHandleCommentUpdated: !!handleCommentUpdated,
+    hasHandleCommentDeleted: !!handleCommentDeleted,
+    hasHandleCommentResolved: !!handleCommentResolved,
+    handleCommentCreated,
+  });
+
+  // Comment hooks with WebSocket broadcast
   const {
     comments,
     threadedComments,
@@ -127,7 +182,13 @@ function EditorContent() {
     deleteComment,
     toggleResolved,
     refreshComments
-  } = useComments({ diagramId: diagramId || "" });
+  } = useComments({
+    diagramId: diagramId || "",
+    onCommentCreated: handleCommentCreated,
+    onCommentUpdated: handleCommentUpdated,
+    onCommentDeleted: handleCommentDeleted,
+    onCommentResolved: handleCommentResolved,
+  });
 
   const prevPanelOpenRef = useRef(commentPanelOpen);
   useEffect(() => {
@@ -139,6 +200,15 @@ function EditorContent() {
     }
     prevPanelOpenRef.current = commentPanelOpen;
   }, [commentPanelOpen, refreshComments]);
+
+  // Listen for incoming comment events from WebSocket
+  useEffect(() => {
+    if (lastCommentEvent && lastCommentEvent.userId !== session?.user?.id) {
+      // Only refresh if the event is from another user
+      console.log(`Received ${lastCommentEvent.type} event for comment ${lastCommentEvent.event.commentId} from user ${lastCommentEvent.userId}`);
+      void refreshComments();
+    }
+  }, [lastCommentEvent, session?.user?.id, refreshComments]);
 
   const fetchSnapshots = useCallback(async (targetId: string) => {
     setSnapshotsLoading(true);
@@ -337,6 +407,20 @@ function EditorContent() {
       // ignore storage failures
     }
   }, [diagramId]);
+
+  // Handle real-time code changes from other users
+  useEffect(() => {
+    if (lastCodeChange && lastCodeChange.userId !== session?.user?.id) {
+      setCode(lastCodeChange.code);
+    }
+  }, [lastCodeChange, session?.user?.id]);
+
+  // Send code changes via WebSocket
+  useEffect(() => {
+    if (isConnected && diagramId) {
+      sendCodeChange(code);
+    }
+  }, [code, isConnected, diagramId, sendCodeChange]);
 
   useEffect(() => {
     localStorage.setItem("mermaid-draft", code);
@@ -1031,6 +1115,24 @@ function EditorContent() {
             position: "relative",
           }}
         >
+          {/* User Presence Indicator - positioned below zoom toolbar */}
+          {isConnected && connectedUsers.size > 0 && (
+            <Box sx={{ position: "absolute", top: 60, right: 10, zIndex: 1000 }}>
+              <UserPresence
+                users={connectedUsers}
+                currentUserId={session?.user?.id}
+              />
+            </Box>
+          )}
+
+          {/* Live Cursors Overlay */}
+          <LiveCursors
+            cursors={cursors}
+            users={connectedUsers}
+            currentUserId={session?.user?.id}
+            editorRef={editorRef}
+          />
+
           <MermaidRenderer
             key={rendererRevision}
             code={debouncedCode}
@@ -1050,7 +1152,7 @@ function EditorContent() {
               setSelectedCommentId(commentId);
               setCommentPanelOpen(true);
             }}
-            onDiagramClick={async (position) => {
+            onDiagramClick={async () => {
               // Handle diagram click - CommentOverlay will show form, this is just for position
               // The actual comment creation happens in CommentOverlay
             }}
