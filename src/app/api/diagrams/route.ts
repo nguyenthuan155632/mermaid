@@ -22,20 +22,14 @@ const createDiagramSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    console.log("POST /api/diagrams - Starting");
     const session = await auth();
-    console.log("Session:", session);
 
     if (!session?.user?.id) {
-      console.log("Unauthorized - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    console.log("Body:", body);
-
     const validatedData = createDiagramSchema.parse(body);
-    console.log("Validated data:", validatedData);
 
     const [newDiagram] = await db
       .insert(diagrams)
@@ -54,7 +48,6 @@ export async function POST(request: Request) {
       description: newDiagram.description,
     });
 
-    console.log("Created diagram:", newDiagram);
     return NextResponse.json(newDiagram, { status: 201 });
   } catch (error) {
     console.error("Error in POST /api/diagrams:", error);

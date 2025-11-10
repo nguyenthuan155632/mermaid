@@ -7,6 +7,7 @@ import {
   boolean,
   index,
   customType,
+  real,
 } from "drizzle-orm/pg-core";
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
@@ -94,5 +95,28 @@ export type Diagram = typeof diagrams.$inferSelect;
 export type NewDiagram = typeof diagrams.$inferInsert;
 export type DiagramSnapshot = typeof diagramSnapshots.$inferSelect;
 export type NewDiagramSnapshot = typeof diagramSnapshots.$inferInsert;
+export const comments = pgTable("comments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  diagramId: uuid("diagram_id")
+    .notNull()
+    .references(() => diagrams.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  parentId: uuid("parent_id"),
+  content: text("content").notNull(),
+  positionX: real("position_x").notNull(),
+  positionY: real("position_y").notNull(),
+  isResolved: boolean("is_resolved").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  diagramIdIdx: index("comments_diagram_id_idx").on(table.diagramId),
+  userIdIdx: index("comments_user_id_idx").on(table.userId),
+  parentIdIdx: index("comments_parent_id_idx").on(table.parentId),
+}));
+
 export type SampleDiagram = typeof sampleDiagrams.$inferSelect;
 export type NewSampleDiagram = typeof sampleDiagrams.$inferInsert;
+export type Comment = typeof comments.$inferSelect;
+export type NewComment = typeof comments.$inferInsert;

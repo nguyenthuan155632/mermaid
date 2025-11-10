@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -45,14 +45,18 @@ import {
   Restore,
   ExpandLess,
   ExpandMore,
+  Comment,
 } from "@mui/icons-material";
 import SamplesSidebar from "@/components/SamplesSidebar";
 import CodeEditor from "@/components/CodeEditor";
 import MermaidRenderer from "@/components/MermaidRenderer";
 import MarkdownEmbedDialog from "@/components/MarkdownEmbedDialog";
+import CommentPanel from "@/components/comments/CommentPanel";
 import { useDebounce } from "@/hooks/useDebounce";
 import { exportToPNG, exportToSVG } from "@/lib/export";
 import { DiagramSnapshot } from "@/types";
+import { useComments } from "@/components/comments/useComments";
+import { useSession } from "next-auth/react";
 
 const LAST_DIAGRAM_ID_STORAGE_KEY = "mermaid-last-diagram-id";
 
@@ -106,6 +110,35 @@ function EditorContent() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const historySectionOpen = isMobile ? true : sidebarSections.history;
+  const { data: session } = useSession();
+
+  // Comment-related state
+  const [isCommentMode, setIsCommentMode] = useState(false);
+  const [commentPanelOpen, setCommentPanelOpen] = useState(false);
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
+  const [rendererRevision, setRendererRevision] = useState(0);
+
+  // Comment hooks
+  const {
+    comments,
+    threadedComments,
+    createComment,
+    updateComment,
+    deleteComment,
+    toggleResolved,
+    refreshComments
+  } = useComments({ diagramId: diagramId || "" });
+
+  const prevPanelOpenRef = useRef(commentPanelOpen);
+  useEffect(() => {
+    if (commentPanelOpen && !prevPanelOpenRef.current) {
+      void refreshComments();
+    }
+    if (!commentPanelOpen && prevPanelOpenRef.current) {
+      setRendererRevision((prev) => prev + 1);
+    }
+    prevPanelOpenRef.current = commentPanelOpen;
+  }, [commentPanelOpen, refreshComments]);
 
   const fetchSnapshots = useCallback(async (targetId: string) => {
     setSnapshotsLoading(true);
@@ -665,6 +698,15 @@ function EditorContent() {
                 Share
               </Button>
               <Button
+                variant={isCommentMode ? "contained" : "outlined"}
+                startIcon={<Comment />}
+                onClick={() => setIsCommentMode(!isCommentMode)}
+                disabled={!activeDiagramId}
+                sx={{ mr: 1 }}
+              >
+                {isCommentMode ? "Commenting" : "Comments"}
+              </Button>
+              <Button
                 variant="contained"
                 startIcon={<Save />}
                 onClick={handleSave}
@@ -775,6 +817,15 @@ function EditorContent() {
                 fullWidth
               >
                 Version History
+              </Button>
+              <Button
+                variant={isCommentMode ? "contained" : "outlined"}
+                startIcon={<Comment />}
+                onClick={() => setIsCommentMode(!isCommentMode)}
+                disabled={!activeDiagramId}
+                fullWidth
+              >
+                {isCommentMode ? "Commenting On" : "Enable Comments"}
               </Button>
             </Stack>
           </Collapse>
@@ -965,9 +1016,11 @@ function EditorContent() {
             flexDirection: "column",
             overflow: "hidden",
             bgcolor: "white",
+            position: "relative",
           }}
         >
           <MermaidRenderer
+            key={rendererRevision}
             code={debouncedCode}
             onError={(err) => {
               setError(err);
@@ -977,6 +1030,21 @@ function EditorContent() {
               setHasError(false);
               setError(null);
             }}
+            comments={comments}
+            threadedComments={threadedComments}
+            selectedCommentId={selectedCommentId}
+            isCommentMode={isCommentMode}
+            onCommentClick={(commentId) => {
+              setSelectedCommentId(commentId);
+              setCommentPanelOpen(true);
+            }}
+            onDiagramClick={async (position) => {
+              // Handle diagram click - CommentOverlay will show form, this is just for position
+              // The actual comment creation happens in CommentOverlay
+            }}
+            diagramId={diagramId || undefined}
+            onCreateComment={createComment}
+            currentUserId={session?.user?.id}
           />
         </Box>
       </Box>
@@ -1402,6 +1470,33 @@ function EditorContent() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Comment Panel */}
+      <CommentPanel
+        comments={comments}
+        threadedComments={threadedComments}
+        selectedCommentId={selectedCommentId}
+        isOpen={commentPanelOpen}
+        onClose={() => setCommentPanelOpen(false)}
+        onSelectComment={setSelectedCommentId}
+        onEditComment={async (commentId, data) => {
+          await updateComment(commentId, data);
+        }}
+        onDeleteComment={async (commentId) => {
+          if (confirm("Are you sure you want to delete this comment?")) {
+            await deleteComment(commentId);
+            if (selectedCommentId === commentId) {
+              setSelectedCommentId(null);
+              setCommentPanelOpen(false);
+            }
+          }
+        }}
+        onToggleResolved={async (commentId) => {
+          await toggleResolved(commentId);
+        }}
+        onCreateComment={createComment}
+        currentUserId={session?.user?.id}
+      />
 
       {/* Markdown Embed Dialog */}
       {diagramId && (

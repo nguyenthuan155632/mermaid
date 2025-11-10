@@ -16,7 +16,12 @@ import {
   FitScreen,
   Fullscreen,
   FullscreenExit,
+  Comment as CommentIcon,
 } from "@mui/icons-material";
+import CommentOverlay from "./comments/CommentOverlay";
+import CommentPopup from "./comments/CommentPopup";
+import { CommentWithUser, ThreadedComment } from "./comments/types";
+import { useComments } from "./comments/useComments";
 
 interface MermaidRendererProps {
   code: string;
@@ -24,6 +29,17 @@ interface MermaidRendererProps {
   onSuccess?: () => void;
   disableInteractions?: boolean;
   initialZoom?: number;
+  // Comment-related props
+  comments?: CommentWithUser[];
+  threadedComments?: ThreadedComment[];
+  selectedCommentId?: string | null;
+  onCommentClick?: (commentId: string) => void;
+  onDiagramClick?: (position: { x: number; y: number }) => void;
+  isCommentMode?: boolean;
+  onToggleCommentMode?: () => void;
+  diagramId?: string;
+  onCreateComment?: (data: { content: string; positionX: number; positionY: number }) => Promise<void>;
+  currentUserId?: string;
 }
 
 const MERMAID_ERROR_PATTERNS = [/syntax error in text/i, /mermaid version/i];
@@ -34,7 +50,32 @@ export default function MermaidRenderer({
   onSuccess,
   disableInteractions = false,
   initialZoom,
+  comments = [],
+  threadedComments = [],
+  selectedCommentId = null,
+  onCommentClick,
+  onDiagramClick,
+  isCommentMode = false,
+  onToggleCommentMode,
+  diagramId,
+  onCreateComment,
+  currentUserId,
 }: MermaidRendererProps) {
+  // Use the comments hook for real functionality
+  const commentsHook = useComments({ diagramId: diagramId || "" });
+  const {
+    comments: hookComments,
+    threadedComments: hookThreadedComments,
+    createComment: hookCreateComment,
+    updateComment: hookUpdateComment,
+    deleteComment: hookDeleteComment,
+    toggleResolved: hookToggleResolved,
+  } = commentsHook;
+
+  // Use hook data if available, otherwise fall back to props
+  const actualComments = diagramId ? hookComments : comments;
+  const actualThreadedComments = diagramId ? hookThreadedComments : threadedComments;
+  const actualCreateComment = diagramId ? hookCreateComment : onCreateComment;
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
   const diagramContainerRef = useRef<HTMLDivElement>(null);
@@ -92,6 +133,144 @@ export default function MermaidRenderer({
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [, setFittedZoom] = useState(resolvedInitialZoom);
   const [isCalculatingZoom, setIsCalculatingZoom] = useState(false);
+  const [popupComment, setPopupComment] = useState<{
+    comment: CommentWithUser;
+    threadedComment?: ThreadedComment;
+    position: { x: number; y: number };
+  } | null>(null);
+  const handlePopupDrag = useCallback((clientPosition: { x: number; y: number }) => {
+    setPopupComment((prev) =>
+      prev ? { ...prev, position: clientPosition } : prev
+    );
+  }, []);
+
+  const handlePopupDragEnd = useCallback(async (clientPosition: { x: number; y: number }) => {
+    setPopupComment((prev) =>
+      prev ? { ...prev, position: clientPosition } : prev
+    );
+
+    if (!diagramId || !popupComment) {
+      return;
+    }
+
+    const containerRect = diagramContainerRef.current?.getBoundingClientRect();
+    if (!containerRect) {
+      return;
+    }
+
+    const containerCenterX = containerRect.left + containerRect.width / 2;
+    const containerCenterY = containerRect.top + containerRect.height / 2;
+    const nextPositionX = (clientPosition.x - containerCenterX - pan.x) / zoom;
+    const nextPositionY = (clientPosition.y - containerCenterY - pan.y) / zoom;
+
+    const commentToUpdate = actualComments.find(
+      (c) => c.id === popupComment.comment.id
+    );
+
+    if (!commentToUpdate) {
+      return;
+    }
+
+    try {
+      await hookUpdateComment(popupComment.comment.id, {
+        content: commentToUpdate.content,
+        positionX: nextPositionX,
+        positionY: nextPositionY,
+      });
+    } catch (err) {
+      console.error("Failed to move comment:", err);
+    }
+  }, [diagramId, popupComment, pan.x, pan.y, zoom, actualComments, hookUpdateComment]);
+
+  const handleIndicatorDragEnd = useCallback(async (commentId: string, position: { x: number; y: number }) => {
+    if (!diagramId) {
+      return;
+    }
+    const comment = actualComments.find((c) => c.id === commentId);
+    if (!comment) {
+      return;
+    }
+
+    try {
+      await hookUpdateComment(commentId, {
+        content: comment.content,
+        positionX: position.x,
+        positionY: position.y,
+      });
+    } catch (error) {
+      console.error("Failed to move comment:", error);
+    }
+  }, [actualComments, diagramId, hookUpdateComment]);
+
+  const findThreadRootForComment = useCallback(
+    (commentId: string): ThreadedComment | null => {
+      for (const rootComment of actualThreadedComments) {
+        if (rootComment.id === commentId) {
+          return rootComment;
+        }
+
+        const stack = [...rootComment.replies];
+        while (stack.length > 0) {
+          const current = stack.pop();
+          if (!current) continue;
+
+          if (current.id === commentId) {
+            return rootComment;
+          }
+
+          if (current.replies.length) {
+            stack.push(...current.replies);
+          }
+        }
+      }
+
+      return null;
+    },
+    [actualThreadedComments]
+  );
+
+  const openPopupForComment = useCallback(
+    (commentId: string) => {
+      const comment = actualComments.find((c) => c.id === commentId);
+      if (!comment) {
+        return;
+      }
+
+      const containerRect = diagramContainerRef.current?.getBoundingClientRect();
+      if (!containerRect) {
+        return;
+      }
+
+      const containerCenterX = containerRect.left + containerRect.width / 2;
+      const containerCenterY = containerRect.top + containerRect.height / 2;
+
+      const transformedX = containerCenterX + comment.positionX * zoom + pan.x;
+      const transformedY = containerCenterY + comment.positionY * zoom + pan.y;
+
+      setPopupComment({
+        comment,
+        threadedComment: findThreadRootForComment(commentId) ?? undefined,
+        position: { x: transformedX, y: transformedY },
+      });
+    },
+    [actualComments, findThreadRootForComment, pan, zoom]
+  );
+
+  // Update popup comment data when comments change
+  useEffect(() => {
+    if (popupComment) {
+      const updatedComment = actualComments.find((c) => c.id === popupComment.comment.id);
+      const updatedThreadedComment = findThreadRootForComment(popupComment.comment.id);
+
+      if (updatedComment || updatedThreadedComment) {
+        setPopupComment(prev => prev ? {
+          ...prev,
+          comment: updatedComment || prev.comment,
+          threadedComment: updatedThreadedComment ?? prev.threadedComment,
+        } : null);
+      }
+    }
+  }, [actualComments, actualThreadedComments, popupComment?.comment.id, findThreadRootForComment]);
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
 
@@ -222,13 +401,22 @@ export default function MermaidRenderer({
     const touchStart = (e: TouchEvent) => {
       const touches = e.touches;
       if (touches.length === 2) {
-        // Two-finger pinch to zoom
+        // Two-finger gesture - determine if it's pinch or drag
+        const distance = getTouchDistance(e);
+        const center = getTouchCenter(e);
+
+        // Initialize gesture state
         isPinchingRef.current = true;
         setIsPinching(true);
-        pinchStartDistanceRef.current = getTouchDistance(e);
-        pinchLastDistanceRef.current = pinchStartDistanceRef.current;
+        pinchStartDistanceRef.current = distance;
+        pinchLastDistanceRef.current = distance;
         pinchStartZoomRef.current = zoom;
-        pinchLastCenterRef.current = getTouchCenter(e);
+        pinchLastCenterRef.current = center;
+
+        // Also enable panning for two-finger drag gestures
+        setIsPanning(true);
+        setPanStart({ x: center.x - pan.x, y: center.y - pan.y });
+
         e.preventDefault();
         e.stopPropagation();
       } else if (touches.length === 1) {
@@ -244,31 +432,41 @@ export default function MermaidRenderer({
     const touchMove = (e: TouchEvent) => {
       const touches = e.touches;
       if (touches.length === 2 && isPinchingRef.current) {
-        // Two-finger pinch to zoom
+        // Two-finger gesture - handle both zoom and pan
         const distance = getTouchDistance(e);
         const center = getTouchCenter(e);
         const target = fullscreenContainer || container;
+
         if (target && pinchLastDistanceRef.current > 0) {
           const rect = target.getBoundingClientRect();
           const containerCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 
-          // Simplified zoom calculation with configurable gain
-          const ratio = distance / pinchLastDistanceRef.current;
-          const k = MOBILE_PINCH_GAIN;
+          // Handle zoom if distance is changing significantly (pinch gesture)
+          const distanceChange = Math.abs(distance - pinchLastDistanceRef.current);
+          const isPinchGesture = distanceChange > 5; // Threshold to detect pinch vs drag
 
-          setZoom((prevZoom) => {
-            const nextZoom = Math.min(Math.max(prevZoom * Math.pow(ratio, k), 0.3), 10);
+          if (isPinchGesture) {
+            // Two-finger pinch to zoom
+            const ratio = distance / pinchLastDistanceRef.current;
+            const k = MOBILE_PINCH_GAIN;
 
-            // Zoom towards the pinch center point
-            const ax = center.x - containerCenter.x;
-            const ay = center.y - containerCenter.y;
-            setPan((prevPan) => ({
-              x: prevPan.x + ax - (nextZoom / prevZoom) * ax,
-              y: prevPan.y + ay - (nextZoom / prevZoom) * ay,
-            }));
+            setZoom((prevZoom) => {
+              const nextZoom = Math.min(Math.max(prevZoom * Math.pow(ratio, k), 0.3), 10);
 
-            return nextZoom;
-          });
+              // Zoom towards the pinch center point
+              const ax = center.x - containerCenter.x;
+              const ay = center.y - containerCenter.y;
+              setPan((prevPan) => ({
+                x: prevPan.x + ax - (nextZoom / prevZoom) * ax,
+                y: prevPan.y + ay - (nextZoom / prevZoom) * ay,
+              }));
+
+              return nextZoom;
+            });
+          } else {
+            // Two-finger drag to pan
+            setPan({ x: center.x - panStart.x, y: center.y - panStart.y });
+          }
         }
         pinchLastDistanceRef.current = distance;
         pinchLastCenterRef.current = center;
@@ -557,6 +755,33 @@ export default function MermaidRenderer({
     setIsFullscreen(false);
   };
 
+  // Handle comment click to show popup
+  const handleCommentClick = (commentId: string) => {
+    openPopupForComment(commentId);
+    // Also call the original handler if provided
+    if (onCommentClick) {
+      onCommentClick(commentId);
+    }
+  };
+
+  // Handle sidebar click - only call the original handler
+  const handleSidebarClick = (commentId: string) => {
+    if (onCommentClick) {
+      onCommentClick(commentId);
+    }
+  };
+
+  // Handle popup click - show popup
+  const handlePopupClick = (commentId: string) => {
+    openPopupForComment(commentId);
+  };
+
+  // Close popup
+  const handleClosePopup = () => {
+    setPopupComment(null);
+  };
+
+
   const renderContent = () => (
     <Box
       sx={{
@@ -613,6 +838,19 @@ export default function MermaidRenderer({
           >
             <FitScreen fontSize="small" />
           </IconButton>
+          {onToggleCommentMode && (
+            <IconButton
+              onClick={onToggleCommentMode}
+              size="small"
+              title={isCommentMode ? "Exit Comment Mode" : "Comment Mode"}
+              sx={{
+                color: "white",
+                bgcolor: isCommentMode ? "secondary.main" : "transparent"
+              }}
+            >
+              <CommentIcon fontSize="small" />
+            </IconButton>
+          )}
           {!isFullscreen && (
             <IconButton
               onClick={handleFullscreen}
@@ -678,6 +916,23 @@ export default function MermaidRenderer({
     <>
       <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
         {renderContent()}
+        {/* Comment Overlay */}
+        <CommentOverlay
+          comments={actualComments}
+          threadedComments={actualThreadedComments}
+          selectedCommentId={selectedCommentId}
+          zoom={zoom}
+          pan={pan}
+          onCommentClick={handleSidebarClick}
+          onDiagramClick={onDiagramClick || (() => { })}
+          isCommentMode={isCommentMode}
+          diagramId={diagramId || ""}
+          isPinching={isPinching}
+          isPanning={isPanning}
+          onCreateComment={actualCreateComment || (async () => { })}
+          onPopupClick={handlePopupClick}
+          onUpdateCommentPosition={handleIndicatorDragEnd}
+        />
       </Box>
       <Dialog
         open={isFullscreen}
@@ -795,6 +1050,44 @@ export default function MermaidRenderer({
           </Box>
         </DialogContent>
       </Dialog>
+
+      {/* Comment Popup */}
+      {popupComment && (
+        <CommentPopup
+          comment={popupComment.comment}
+          threadedComment={popupComment.threadedComment}
+          position={popupComment.position}
+          onClose={handleClosePopup}
+          onDelete={async (commentId) => {
+            try {
+              await hookDeleteComment(commentId);
+              handleClosePopup();
+            } catch (error) {
+              console.error('Failed to delete comment:', error);
+            }
+          }}
+          onToggleResolved={async (commentId) => {
+            try {
+              await hookToggleResolved(commentId);
+            } catch (error) {
+              console.error('Failed to toggle resolved:', error);
+            }
+          }}
+          currentUserId={currentUserId}
+          // NEW PROPS for Add/Edit/Reply functionality
+          onCreateComment={actualCreateComment}
+          diagramId={diagramId}
+          onUpdateComment={async (commentId: string, data: { content: string }) => {
+            try {
+              await hookUpdateComment(commentId, data);
+            } catch (error) {
+              console.error('Failed to update comment:', error);
+            }
+          }}
+          onDrag={handlePopupDrag}
+          onDragEnd={handlePopupDragEnd}
+        />
+      )}
     </>
   );
 }
