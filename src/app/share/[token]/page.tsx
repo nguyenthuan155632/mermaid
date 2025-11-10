@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Box,
   Typography,
@@ -13,14 +14,24 @@ import {
   useMediaQuery,
   IconButton,
 } from "@mui/material";
-import { GetApp, ExpandMore, Close as CloseIcon, Image as ImageIcon } from "@mui/icons-material";
+import {
+  GetApp,
+  ExpandMore,
+  Close as CloseIcon,
+  Image as ImageIcon,
+  Comment,
+} from "@mui/icons-material";
 import MermaidRenderer from "@/components/MermaidRenderer";
+import CommentPanel from "@/components/comments/CommentPanel";
+import { useComments } from "@/components/comments/useComments";
 import { exportToPNG, exportToSVG } from "@/lib/export";
 
 export default function SharePage() {
   const params = useParams();
   const token = params.token as string;
+  const { data: session } = useSession();
   const [diagram, setDiagram] = useState<{
+    id: string;
     title: string;
     code: string;
   } | null>(null);
@@ -28,6 +39,22 @@ export default function SharePage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Comment-related state - reusing the same pattern from editor
+  const [isCommentMode, setIsCommentMode] = useState(false);
+  const [commentPanelOpen, setCommentPanelOpen] = useState(false);
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
+
+  // Initialize comments hook - only when we have a diagram ID
+  const {
+    comments,
+    threadedComments,
+    createComment,
+    updateComment,
+    deleteComment,
+    toggleResolved,
+    refreshComments,
+  } = useComments({ diagramId: diagram?.id || "" });
 
   useEffect(() => {
     if (token) {
@@ -42,6 +69,14 @@ export default function SharePage() {
         .finally(() => setLoading(false));
     }
   }, [token]);
+
+  // Refresh comments when panel opens
+  const handleCommentPanelOpen = useCallback(() => {
+    setCommentPanelOpen(true);
+    if (diagram?.id) {
+      void refreshComments();
+    }
+  }, [diagram?.id, refreshComments]);
 
   const handleExportPNG = async () => {
     if (diagram) {
@@ -137,6 +172,14 @@ export default function SharePage() {
               >
                 <GetApp fontSize="small" />
               </IconButton>
+              <IconButton
+                onClick={() => setIsCommentMode(!isCommentMode)}
+                title={isCommentMode ? "Exit Comment Mode" : "Comment Mode"}
+                color={isCommentMode ? "secondary" : "primary"}
+                size="small"
+              >
+                <Comment fontSize="small" />
+              </IconButton>
             </>
           ) : (
             <Stack
@@ -172,6 +215,13 @@ export default function SharePage() {
               >
                 Export SVG
               </Button>
+              <Button
+                variant={isCommentMode ? "contained" : "outlined"}
+                startIcon={<Comment />}
+                onClick={() => setIsCommentMode(!isCommentMode)}
+              >
+                {isCommentMode ? "Commenting" : "Comments"}
+              </Button>
             </Stack>
           )}
         </Toolbar>
@@ -189,7 +239,23 @@ export default function SharePage() {
             py: { xs: 2, md: 4 },
           }}
         >
-          <MermaidRenderer code={diagram.code} />
+          <MermaidRenderer
+            code={diagram.code}
+            comments={comments}
+            threadedComments={threadedComments}
+            selectedCommentId={selectedCommentId}
+            isCommentMode={isCommentMode}
+            onCommentClick={(commentId) => {
+              setSelectedCommentId(commentId);
+              handleCommentPanelOpen();
+            }}
+            onDiagramClick={async () => {
+              // Handle diagram click for adding comments
+            }}
+            diagramId={diagram?.id}
+            onCreateComment={createComment}
+            currentUserId={session?.user?.id}
+          />
         </Box>
         {detailsOpen && (
           <Box
@@ -223,6 +289,34 @@ export default function SharePage() {
           </Box>
         )}
       </Box>
+
+      {/* Comment Panel - Reusing the exact same component from editor */}
+      <CommentPanel
+        comments={comments}
+        threadedComments={threadedComments}
+        selectedCommentId={selectedCommentId}
+        isOpen={commentPanelOpen}
+        onClose={() => setCommentPanelOpen(false)}
+        onSelectComment={setSelectedCommentId}
+        onEditComment={async (commentId, data) => {
+          await updateComment(commentId, data);
+        }}
+        onDeleteComment={async (commentId) => {
+          if (confirm("Are you sure you want to delete this comment?")) {
+            await deleteComment(commentId);
+            if (selectedCommentId === commentId) {
+              setSelectedCommentId(null);
+              setCommentPanelOpen(false);
+            }
+          }
+        }}
+        onToggleResolved={async (commentId) => {
+          await toggleResolved(commentId);
+        }}
+        onCreateComment={createComment}
+        currentUserId={session?.user?.id}
+        diagramId={diagram?.id}
+      />
     </Box >
   );
 }

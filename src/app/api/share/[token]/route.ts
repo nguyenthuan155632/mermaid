@@ -11,6 +11,7 @@ export async function GET(
     const { token } = await params;
     const [diagram] = await db
       .select({
+        id: diagrams.id,
         title: diagrams.title,
         code: diagrams.code,
       })
