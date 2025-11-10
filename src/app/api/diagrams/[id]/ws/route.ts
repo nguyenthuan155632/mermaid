@@ -103,8 +103,6 @@ export function initializeWebSocketServer() {
       }
       diagramRooms.get(diagramId)!.add(ws);
 
-      console.log(`User ${userId} joined diagram ${diagramId}`);
-
       // Send current users list to new user
       const roomUsers = Array.from(diagramRooms.get(diagramId)!)
         .map(socket => userSockets.get(socket))
@@ -149,8 +147,6 @@ export function initializeWebSocketServer() {
 
       // Handle disconnection
       ws.on("close", () => {
-        console.log(`User ${userId} left diagram ${diagramId}`);
-
         // Remove from room
         const room = diagramRooms.get(diagramId);
         if (room) {
@@ -191,7 +187,6 @@ export function initializeWebSocketServer() {
     }
   });
 
-  console.log("WebSocket server initialized on port 4026");
   return wss;
 }
 

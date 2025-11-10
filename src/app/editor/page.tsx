@@ -139,7 +139,6 @@ function EditorContent() {
 
   // WebSocket comment broadcast callbacks - use useCallback since sendCommentXXX use refs internally
   const handleCommentCreated = useCallback((comment: unknown) => {
-    console.log('[Editor] handleCommentCreated called:', comment);
     sendCommentCreated({
       commentId: (comment as { id: string }).id,
       comment
@@ -147,7 +146,6 @@ function EditorContent() {
   }, [sendCommentCreated]);
 
   const handleCommentUpdated = useCallback((comment: unknown) => {
-    console.log('[Editor] handleCommentUpdated called:', comment);
     sendCommentUpdated({
       commentId: (comment as { id: string }).id,
       comment
@@ -155,24 +153,12 @@ function EditorContent() {
   }, [sendCommentUpdated]);
 
   const handleCommentDeleted = useCallback((commentId: string) => {
-    console.log('[Editor] handleCommentDeleted called:', commentId);
     sendCommentDeleted({ commentId });
   }, [sendCommentDeleted]);
 
   const handleCommentResolved = useCallback((commentId: string, isResolved: boolean) => {
-    console.log('[Editor] handleCommentResolved called:', commentId, isResolved);
     sendCommentResolved({ commentId, isResolved });
   }, [sendCommentResolved]);
-
-  // Debug: Log callbacks before passing to useComments
-  console.warn('🚀🚀🚀 [Editor] Initializing useComments with callbacks:', {
-    diagramId,
-    hasHandleCommentCreated: !!handleCommentCreated,
-    hasHandleCommentUpdated: !!handleCommentUpdated,
-    hasHandleCommentDeleted: !!handleCommentDeleted,
-    hasHandleCommentResolved: !!handleCommentResolved,
-    handleCommentCreated,
-  });
 
   // Comment hooks with WebSocket broadcast
   const {
@@ -206,7 +192,6 @@ function EditorContent() {
   useEffect(() => {
     if (lastCommentEvent && lastCommentEvent.userId !== session?.user?.id) {
       // Only refresh if the event is from another user
-      console.log(`Received ${lastCommentEvent.type} event for comment ${lastCommentEvent.event.commentId} from user ${lastCommentEvent.userId}`);
       void refreshComments();
     }
   }, [lastCommentEvent, session?.user?.id, refreshComments]);

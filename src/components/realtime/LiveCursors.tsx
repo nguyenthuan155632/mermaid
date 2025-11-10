@@ -1,5 +1,5 @@
 import { useState, useEffect, RefObject } from "react";
-import { Box, Typography, Avatar, Tooltip } from "@mui/material";
+import { Box, Avatar, Tooltip } from "@mui/material";
 import { UserInfo, CursorPosition } from "@/hooks/useWebSocket";
 
 interface LiveCursorsProps {
@@ -95,10 +95,26 @@ export function LiveCursors({ cursors, users, currentUserId, editorRef, anonymou
     >
       {cursorPositions.map(({ userId, userInfo, position, color }) => {
         const isAnonymousUser = anonymousMode || userInfo.isAnonymous;
+        // For anonymous users, create unique display name from ID if name is generic
+        let displayName: string;
+        if (isAnonymousUser) {
+          if (userInfo.name && userInfo.name !== 'Anonymous User' && userInfo.name.startsWith('Anonymous ')) {
+            // Already has unique name like "Anonymous abc123"
+            displayName = userInfo.name;
+          } else if (userInfo.id) {
+            // Generate unique name from ID
+            const idPart = userInfo.id.split('_').pop()?.substring(0, 6) || userInfo.id.substring(userInfo.id.length - 6);
+            displayName = `Anonymous ${idPart}`;
+          } else {
+            displayName = 'Anonymous User';
+          }
+        } else {
+          displayName = userInfo.name || userInfo.email || 'Anonymous';
+        }
         return (
           <Tooltip
             key={userId}
-            title={isAnonymousUser ? "Anonymous User" : (userInfo.name || userInfo.email || 'Anonymous')}
+            title={displayName}
             placement="top"
             arrow
             componentsProps={{
@@ -140,7 +156,7 @@ export function LiveCursors({ cursors, users, currentUserId, editorRef, anonymou
               {/* User avatar */}
               <Avatar
                 src={isAnonymousUser ? undefined : userInfo.image}
-                alt={isAnonymousUser ? "Anonymous User" : (userInfo.name || userInfo.email || 'Anonymous')}
+                alt={displayName}
                 sx={{
                   width: 20,
                   height: 20,
@@ -151,7 +167,7 @@ export function LiveCursors({ cursors, users, currentUserId, editorRef, anonymou
                   backgroundColor: isAnonymousUser ? "grey.500" : undefined,
                 }}
               >
-                {getUserInitials({ ...userInfo, isAnonymous: isAnonymousUser })}
+                {getUserInitials({ ...userInfo, isAnonymous: isAnonymousUser, name: displayName })}
               </Avatar>
             </Box>
           </Tooltip>
@@ -185,8 +201,20 @@ function getUserColor(userId: string): string {
 }
 
 function getUserInitials(user: UserInfo): string {
-  // Handle anonymous users
+  // For anonymous users, show first letter of the unique ID part
   if (user.isAnonymous) {
+    // If name includes a unique ID (e.g., "Anonymous abc123"), show "A" + first letter of ID
+    if (user.name && user.name.includes(' ') && user.name !== 'Anonymous User') {
+      const parts = user.name.split(' ');
+      if (parts.length > 1 && parts[1]) {
+        return `A${parts[1].substring(0, 1).toUpperCase()}`;
+      }
+    }
+    // Fallback: show first letter from ID if available
+    if (user.id) {
+      const idPart = user.id.split('_').pop()?.substring(0, 1) || user.id.substring(user.id.length - 1);
+      return `A${idPart.toUpperCase()}`;
+    }
     return "A";
   }
 

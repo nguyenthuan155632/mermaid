@@ -90,7 +90,6 @@ export default function CommentOverlay({
   // Handle popup click - trigger popup display
   const handlePopupClick = (commentId: string) => {
     // This should trigger the popup display in the parent component
-    console.log('Popup click requested for comment:', commentId);
     if (onPopupClick) {
       onPopupClick(commentId);
     }

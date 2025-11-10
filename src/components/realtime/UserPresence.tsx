@@ -15,15 +15,6 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
   const visibleUsers = otherUsers.slice(0, maxVisible);
   const remainingCount = otherUsers.length - visibleUsers.length;
 
-  // Debug logging
-  console.log('👥 UserPresence render:', {
-    totalUsers: usersArray.length,
-    currentUserId,
-    otherUsersCount: otherUsers.length,
-    anonymousMode,
-    users: usersArray.map(u => ({ id: u.id, name: u.name, email: u.email }))
-  });
-
   if (otherUsers.length === 0) {
     return null;
   }
@@ -47,16 +38,32 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
       {/* Visible user avatars */}
       {visibleUsers.map((user: UserInfo, index: number) => {
         const isAnonymousUser = anonymousMode || user.isAnonymous;
+        // For anonymous users, create unique display name from ID if name is generic
+        let displayName: string;
+        if (isAnonymousUser) {
+          if (user.name && user.name !== 'Anonymous User' && user.name.startsWith('Anonymous ')) {
+            // Already has unique name like "Anonymous abc123"
+            displayName = user.name;
+          } else if (user.id) {
+            // Generate unique name from ID
+            const idPart = user.id.split('_').pop()?.substring(0, 6) || user.id.substring(user.id.length - 6);
+            displayName = `Anonymous ${idPart}`;
+          } else {
+            displayName = 'Anonymous User';
+          }
+        } else {
+          displayName = user.name || user.email || 'Anonymous';
+        }
         return (
           <Tooltip
             key={user.id || `user-${index}`}
-            title={isAnonymousUser ? "Anonymous User" : (user.name || user.email || 'Anonymous')}
+            title={displayName}
             placement="top"
             arrow
           >
             <Avatar
               src={isAnonymousUser ? undefined : user.image}
-              alt={isAnonymousUser ? "Anonymous User" : (user.name || user.email)}
+              alt={displayName}
               sx={{
                 width: 24,
                 height: 24,
@@ -67,7 +74,7 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
                 backgroundColor: isAnonymousUser ? "grey.500" : undefined,
               }}
             >
-              {getUserInitials({ ...user, isAnonymous: isAnonymousUser })}
+              {getUserInitials({ ...user, isAnonymous: isAnonymousUser, name: displayName })}
             </Avatar>
           </Tooltip>
         );
@@ -93,8 +100,20 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
 }
 
 function getUserInitials(user: UserInfo): string {
-  // For anonymous users, always show "A"
+  // For anonymous users, show first letter of the unique ID part
   if (user.isAnonymous) {
+    // If name includes a unique ID (e.g., "Anonymous abc123"), show "A" + first letter of ID
+    if (user.name && user.name.includes(' ') && user.name !== 'Anonymous User') {
+      const parts = user.name.split(' ');
+      if (parts.length > 1 && parts[1]) {
+        return `A${parts[1].substring(0, 1).toUpperCase()}`;
+      }
+    }
+    // Fallback: show first letter from ID if available
+    if (user.id) {
+      const idPart = user.id.split('_').pop()?.substring(0, 1) || user.id.substring(user.id.length - 1);
+      return `A${idPart.toUpperCase()}`;
+    }
     return "A";
   }
 

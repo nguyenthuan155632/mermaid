@@ -61,11 +61,6 @@ const wsStateManager = {
 
   updateConnectedUsers(users: UserInfo[]) {
     const newMap = new Map(users.map(u => [u.id, u]));
-    console.log('📝 wsStateManager.updateConnectedUsers:', {
-      usersCount: users.length,
-      users: users.map(u => ({ id: u.id, name: u.name, email: u.email })),
-      mapSize: newMap.size
-    });
     this.state.connectedUsers = newMap;
     this.notifyListeners();
   },
@@ -138,7 +133,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
     const anonymousModeChanged = prevAnonymousModeRef.current !== anonymousMode;
 
     if (diagramChanged || sessionChanged || anonymousModeChanged) {
-      console.log('🎣 useWebSocket hook initialized/rendered for diagramId:', diagramId, 'session:', session?.user?.id, 'anonymousMode:', anonymousMode);
       prevDiagramIdRef.current = diagramId;
       prevSessionIdRef.current = session?.user?.id;
       prevAnonymousModeRef.current = anonymousMode;
@@ -154,10 +148,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
   // Subscribe to state manager updates
   useEffect(() => {
     const unsubscribe = wsStateManager.subscribe((state) => {
-      console.log('🔔 wsStateManager notified listener:', {
-        connectedUsersSize: state.connectedUsers.size,
-        connectedUsers: Array.from(state.connectedUsers.values()).map(u => ({ id: u.id, name: u.name, email: u.email }))
-      });
       setConnectedUsers(new Map(state.connectedUsers)); // Create new Map to force re-render
       setLastCodeChange(state.lastCodeChange);
       setCursors(state.cursors);
@@ -179,40 +169,38 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
 
     // Don't connect if already connected or connecting
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-      console.log('[WS] Already connected or connecting, skipping...');
       return;
     }
 
     // For anonymous mode, allow connection without session
     // For authenticated mode, wait for session to be available (it might be loading)
     if (!anonymousModeRef.current && !session?.user?.id) {
-      console.log('[WS] Waiting for session before connecting...');
       return;
     }
 
     try {
       // Connect to WebSocket server on port 4026
       const wsUrl = `ws://localhost:4026/api/diagrams/${diagramId}/ws`;
-      console.log('[WS] Connecting to:', wsUrl, 'anonymousMode:', anonymousModeRef.current);
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log("WebSocket connected");
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
 
         // Send user info as headers (since we can't set headers in WebSocket constructor)
         if (wsRef.current) {
           if (anonymousModeRef.current) {
-            // Send anonymous user info
+            // Send anonymous user info with unique display name
             const anonymousUserId = `anonymous_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
             anonymousUserIdRef.current = anonymousUserId; // Store for later use
-            console.log('[WS] Anonymous mode - setting anonymousUserId:', anonymousUserId);
+            // Create a short unique identifier for display (last 6 chars of the random part)
+            const shortId = anonymousUserId.split('_').pop()?.substring(0, 6) || 'anon';
+            const displayName = `Anonymous ${shortId}`;
             wsRef.current.send(JSON.stringify({
               type: "join_room",
               data: {
                 userId: anonymousUserId,
-                userName: "Anonymous User",
+                userName: displayName,
                 userEmail: "anonymous@example.com",
                 userImage: null,
                 isAnonymous: true,
@@ -241,16 +229,12 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
       wsRef.current.onmessage = (event) => {
         try {
           const message: WSMessage = JSON.parse(event.data);
-          console.log('📨 WebSocket message received:', message.type, message);
 
           switch (message.type) {
             case "user_presence":
-              console.log('👥 Processing user_presence message, data:', message.data);
               if (typeof message.data === "object" && message.data !== null) {
                 const data = message.data as { users?: UserInfo[]; action?: string; user?: UserInfo };
-                console.log('👥 data.users exists?', !!data.users, 'data.users:', data.users);
                 if (data.users) {
-                  console.log(`🔄 Received user_presence update: ${data.users.length} users`, data.users);
                   wsStateManager.updateConnectedUsers(data.users);
                 } else {
                   console.warn('⚠️ user_presence message has no users array!', data);
@@ -313,7 +297,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
       };
 
       wsRef.current.onclose = (event) => {
-        console.log("WebSocket disconnected:", event.code, event.reason);
         setIsConnected(false);
         // Don't clear state on disconnect - keep for display
         // State persists in singleton manager
@@ -330,21 +313,22 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
               wsRef.current = newWs;
 
               newWs.onopen = () => {
-                console.log("WebSocket reconnected");
                 setIsConnected(true);
                 reconnectAttemptsRef.current = 0;
 
                 if (newWs) {
                   if (anonymousModeRef.current) {
-                    // Send anonymous user info
+                    // Send anonymous user info with unique display name
                     const anonymousUserId = `anonymous_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
                     anonymousUserIdRef.current = anonymousUserId; // Store for later use
-                    console.log('[WS] Reconnect - Anonymous mode - setting anonymousUserId:', anonymousUserId);
+                    // Create a short unique identifier for display (last 6 chars of the random part)
+                    const shortId = anonymousUserId.split('_').pop()?.substring(0, 6) || 'anon';
+                    const displayName = `Anonymous ${shortId}`;
                     newWs.send(JSON.stringify({
                       type: "join_room",
                       data: {
                         userId: anonymousUserId,
-                        userName: "Anonymous User",
+                        userName: displayName,
                         userEmail: "anonymous@example.com",
                         userImage: null,
                         isAnonymous: true,
@@ -421,22 +405,11 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
   }, [session?.user?.id]);
 
   const sendCommentPosition = useCallback((commentPosition: CommentPosition) => {
-    console.log('[WS] sendCommentPosition called:', {
-      commentPosition,
-      wsReadyState: wsRef.current?.readyState,
-      isOpen: wsRef.current?.readyState === WebSocket.OPEN,
-      anonymousMode: anonymousModeRef.current,
-      anonymousUserId: anonymousUserIdRef.current,
-      sessionUserId: sessionRef.current?.user?.id,
-    });
-
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       // Allow sending position updates in anonymous mode or when authenticated
       const userId = anonymousModeRef.current && anonymousUserIdRef.current
         ? anonymousUserIdRef.current
         : sessionRef.current?.user?.id;
-
-      console.log('[WS] sendCommentPosition - userId:', userId);
 
       if (userId) {
         const message = {
@@ -445,7 +418,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
           userId: userId,
           timestamp: Date.now(),
         };
-        console.log('[WS] Sending comment_position:', message);
         wsRef.current.send(JSON.stringify(message));
       } else {
         console.warn('[WS] Cannot send comment_position - no userId available');
@@ -467,12 +439,10 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
   }, []);
 
   const sendCommentCreated = useCallback((commentEvent: CommentEvent) => {
-    console.log('[WS] sendCommentCreated called:', commentEvent);
     const userId = anonymousModeRef.current && anonymousUserIdRef.current
       ? anonymousUserIdRef.current
       : sessionRef.current?.user?.id;
 
-    console.log('[WS] WebSocket state:', wsRef.current?.readyState, 'userId:', userId);
     if (wsRef.current?.readyState === WebSocket.OPEN && userId) {
       const message = {
         type: "comment_created",
@@ -480,7 +450,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
         userId: userId,
         timestamp: Date.now(),
       };
-      console.log('[WS] Sending comment_created:', message);
       wsRef.current.send(JSON.stringify(message));
     } else {
       console.warn('[WS] Cannot send comment_created - WebSocket not open or no userId. readyState:', wsRef.current?.readyState, 'userId:', userId);
@@ -488,7 +457,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
   }, []); // No dependencies - uses refs
 
   const sendCommentUpdated = useCallback((commentEvent: CommentEvent) => {
-    console.log('[WS] sendCommentUpdated called:', commentEvent);
     const userId = anonymousModeRef.current && anonymousUserIdRef.current
       ? anonymousUserIdRef.current
       : sessionRef.current?.user?.id;
@@ -500,7 +468,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
         userId: userId,
         timestamp: Date.now(),
       };
-      console.log('[WS] Sending comment_updated:', message);
       wsRef.current.send(JSON.stringify(message));
     } else {
       console.warn('[WS] Cannot send comment_updated - WebSocket not open or no userId. readyState:', wsRef.current?.readyState, 'userId:', userId);
@@ -508,7 +475,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
   }, []); // No dependencies - uses refs
 
   const sendCommentDeleted = useCallback((commentEvent: CommentEvent) => {
-    console.log('[WS] sendCommentDeleted called:', commentEvent);
     const userId = anonymousModeRef.current && anonymousUserIdRef.current
       ? anonymousUserIdRef.current
       : sessionRef.current?.user?.id;
@@ -520,7 +486,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
         userId: userId,
         timestamp: Date.now(),
       };
-      console.log('[WS] Sending comment_deleted:', message);
       wsRef.current.send(JSON.stringify(message));
     } else {
       console.warn('[WS] Cannot send comment_deleted - WebSocket not open or no userId. readyState:', wsRef.current?.readyState, 'userId:', userId);
@@ -528,7 +493,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
   }, []); // No dependencies - uses refs
 
   const sendCommentResolved = useCallback((commentEvent: CommentEvent) => {
-    console.log('[WS] sendCommentResolved called:', commentEvent);
     const userId = anonymousModeRef.current && anonymousUserIdRef.current
       ? anonymousUserIdRef.current
       : sessionRef.current?.user?.id;
@@ -540,7 +504,6 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
         userId: userId,
         timestamp: Date.now(),
       };
-      console.log('[WS] Sending comment_resolved:', message);
       wsRef.current.send(JSON.stringify(message));
     } else {
       console.warn('[WS] Cannot send comment_resolved - WebSocket not open or no userId. readyState:', wsRef.current?.readyState, 'userId:', userId);

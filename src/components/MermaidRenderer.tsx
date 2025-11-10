@@ -82,19 +82,15 @@ export default function MermaidRenderer({
   const commentsHook = useComments({
     diagramId: diagramId || "",
     onCommentCreated: (comment) => {
-      console.log('[MermaidRenderer] onCommentCreated callback triggered:', comment.id);
       sendCommentCreated({ commentId: comment.id, comment });
     },
     onCommentUpdated: (comment) => {
-      console.log('[MermaidRenderer] onCommentUpdated callback triggered:', comment.id);
       sendCommentUpdated({ commentId: comment.id, comment });
     },
     onCommentDeleted: (commentId) => {
-      console.log('[MermaidRenderer] onCommentDeleted callback triggered:', commentId);
       sendCommentDeleted({ commentId });
     },
     onCommentResolved: (commentId, isResolved) => {
-      console.log('[MermaidRenderer] onCommentResolved callback triggered:', commentId, isResolved);
       sendCommentResolved({ commentId, isResolved });
     },
   });
@@ -219,28 +215,22 @@ export default function MermaidRenderer({
   }, [diagramId, popupComment, pan.x, pan.y, zoom, actualComments, hookUpdateComment]);
 
   const handleIndicatorDragEnd = useCallback(async (commentId: string, position: { x: number; y: number }) => {
-    console.log('[MermaidRenderer] handleIndicatorDragEnd called:', { commentId, position, diagramId });
-
     if (!diagramId) {
-      console.warn('[MermaidRenderer] handleIndicatorDragEnd - no diagramId');
       return;
     }
     const comment = actualComments.find((c) => c.id === commentId);
     if (!comment) {
-      console.warn('[MermaidRenderer] handleIndicatorDragEnd - comment not found:', commentId);
       return;
     }
 
     try {
       // Only send position update (allows all users to drag comments for collaboration)
-      console.log('[MermaidRenderer] Updating comment position via API...');
       await hookUpdateComment(commentId, {
         positionX: position.x,
         positionY: position.y,
       });
 
       // Send real-time update to other users
-      console.log('[MermaidRenderer] Sending position update via WebSocket...');
       sendCommentPosition({
         commentId,
         x: position.x,
@@ -329,7 +319,6 @@ export default function MermaidRenderer({
 
     if (lastCommentEvent && lastCommentEvent.userId !== session?.user?.id) {
       // Only refresh if the event is from another user
-      console.log(`[MermaidRenderer] Received ${lastCommentEvent.type} event for comment ${lastCommentEvent.event.commentId} from user ${lastCommentEvent.userId}`);
       void refreshComments();
     }
   }, [lastCommentEvent, session?.user?.id, refreshComments, diagramId]);

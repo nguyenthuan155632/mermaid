@@ -7,7 +7,6 @@ export function ensureWebSocketServer() {
   if (!wsServerInitialized) {
     initializeWebSocketServer();
     wsServerInitialized = true;
-    console.log("WebSocket server started");
   }
 }
 

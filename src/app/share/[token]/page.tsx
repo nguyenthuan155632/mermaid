@@ -133,7 +133,6 @@ export default function SharePage() {
   useEffect(() => {
     if (lastCommentEvent && lastCommentEvent.userId !== session?.user?.id) {
       // Only refresh if the event is from another user
-      console.log(`Received ${lastCommentEvent.type} event for comment ${lastCommentEvent.event.commentId} from user ${lastCommentEvent.userId}`);
       void refreshComments();
     }
   }, [lastCommentEvent, session?.user?.id, refreshComments]);

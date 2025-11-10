@@ -13,10 +13,7 @@ const wss = new WebSocketServer({
   // Don't set path here, we'll handle routing manually
 });
 
-console.log('🚀 WebSocket server starting on port 4026...');
-
 wss.on('connection', (ws, request) => {
-  console.log('📡 New WebSocket connection established');
 
   let userId = null;
   let diagramId = null;
@@ -40,8 +37,6 @@ wss.on('connection', (ws, request) => {
             isAnonymous: message.data.isAnonymous || false
           };
 
-          console.log(`👤 User ${userId} (${userInfo.name || userInfo.email}) joined diagram ${diagramId}`);
-
           // Add user to room
           if (!rooms.has(diagramId)) {
             rooms.set(diagramId, new Map());
@@ -50,7 +45,6 @@ wss.on('connection', (ws, request) => {
 
           // Send current users to everyone in the room
           const currentUsers = Array.from(rooms.get(diagramId).values()).map(u => u.userInfo);
-          console.log(`📊 Broadcasting ${currentUsers.length} users to room ${diagramId}:`, currentUsers.map(u => u.name || u.email));
 
           broadcastToRoom(diagramId, {
             type: 'user_presence',
@@ -64,7 +58,6 @@ wss.on('connection', (ws, request) => {
 
         case 'code_change':
           if (diagramId && userId) {
-            console.log(`📝 Code change in diagram ${diagramId} by user ${userId}`);
             broadcastToRoom(diagramId, {
               type: 'code_change',
               data: message.data,
@@ -76,7 +69,6 @@ wss.on('connection', (ws, request) => {
 
         case 'cursor_move':
           if (diagramId && userId) {
-            console.log(`👆 Cursor move in diagram ${diagramId} by user ${userId}`);
             broadcastToRoom(diagramId, {
               type: 'cursor_move',
               data: message.data,
@@ -88,7 +80,6 @@ wss.on('connection', (ws, request) => {
 
         case 'comment_position':
           if (diagramId && userId) {
-            console.log(`📍 Comment position change in diagram ${diagramId} by user ${userId}`);
             broadcastToRoom(diagramId, {
               type: 'comment_position',
               data: message.data,
@@ -100,7 +91,6 @@ wss.on('connection', (ws, request) => {
 
         case 'comment_created':
           if (diagramId && userId) {
-            console.log(`💬 Comment created in diagram ${diagramId} by user ${userId}`);
             broadcastToRoom(diagramId, {
               type: 'comment_created',
               data: message.data,
@@ -112,7 +102,6 @@ wss.on('connection', (ws, request) => {
 
         case 'comment_updated':
           if (diagramId && userId) {
-            console.log(`✏️ Comment updated in diagram ${diagramId} by user ${userId}`);
             broadcastToRoom(diagramId, {
               type: 'comment_updated',
               data: message.data,
@@ -124,7 +113,6 @@ wss.on('connection', (ws, request) => {
 
         case 'comment_deleted':
           if (diagramId && userId) {
-            console.log(`🗑️ Comment deleted in diagram ${diagramId} by user ${userId}`);
             broadcastToRoom(diagramId, {
               type: 'comment_deleted',
               data: message.data,
@@ -136,7 +124,6 @@ wss.on('connection', (ws, request) => {
 
         case 'comment_resolved':
           if (diagramId && userId) {
-            console.log(`✅ Comment resolved status changed in diagram ${diagramId} by user ${userId}`);
             broadcastToRoom(diagramId, {
               type: 'comment_resolved',
               data: message.data,
@@ -153,15 +140,12 @@ wss.on('connection', (ws, request) => {
 
   ws.on('close', () => {
     if (userId && diagramId) {
-      console.log(`👋 User ${userId} left diagram ${diagramId}`);
-
       // Remove user from room
       if (rooms.has(diagramId)) {
         rooms.get(diagramId).delete(userId);
 
         // Notify remaining users
         const remainingUsers = Array.from(rooms.get(diagramId).values()).map(u => u.userInfo);
-        console.log(`📊 Broadcasting ${remainingUsers.length} remaining users to room ${diagramId}`);
 
         broadcastToRoom(diagramId, {
           type: 'user_presence',
@@ -214,26 +198,19 @@ function broadcastToRoom(diagramId, message, excludeWs = null) {
 }
 
 server.listen(4026, () => {
-  console.log('✅ WebSocket server is running on port 4026');
-  console.log('📡 WebSocket endpoint: ws://localhost:4026/api/diagrams/[id]/ws');
-  console.log('🌐 Make sure your Next.js app is running and can connect to this server');
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
   wss.close();
   server.close(() => {
-    console.log('✅ Server closed');
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
   wss.close();
   server.close(() => {
-    console.log('✅ Server closed');
     process.exit(0);
   });
 });
