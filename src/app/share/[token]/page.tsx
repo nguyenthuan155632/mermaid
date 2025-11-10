@@ -13,6 +13,7 @@ import {
   useTheme,
   useMediaQuery,
   IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   GetApp,
@@ -20,6 +21,7 @@ import {
   Close as CloseIcon,
   Image as ImageIcon,
   Comment,
+  Login,
 } from "@mui/icons-material";
 import MermaidRenderer from "@/components/MermaidRenderer";
 import CommentPanel from "@/components/comments/CommentPanel";
@@ -78,6 +80,16 @@ export default function SharePage() {
     }
   }, [diagram?.id, refreshComments]);
 
+  const handleCommentModeToggle = () => {
+    if (!session) {
+      // User is not logged in, redirect to login page with callback URL
+      const currentUrl = window.location.href;
+      window.location.href = `/login?callbackUrl=${encodeURIComponent(currentUrl)}`;
+      return;
+    }
+    setIsCommentMode(!isCommentMode);
+  };
+
   const handleExportPNG = async () => {
     if (diagram) {
       await exportToPNG(diagram.code, diagram.title);
@@ -105,6 +117,10 @@ export default function SharePage() {
       </Box>
     );
   }
+
+  const commentButtonTitle = session
+    ? (isCommentMode ? "Exit Comment Mode" : "Comment Mode")
+    : "Login to enable comments";
 
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
@@ -172,14 +188,18 @@ export default function SharePage() {
               >
                 <GetApp fontSize="small" />
               </IconButton>
-              <IconButton
-                onClick={() => setIsCommentMode(!isCommentMode)}
-                title={isCommentMode ? "Exit Comment Mode" : "Comment Mode"}
-                color={isCommentMode ? "secondary" : "primary"}
-                size="small"
-              >
-                <Comment fontSize="small" />
-              </IconButton>
+              <Tooltip title={commentButtonTitle}>
+                <span>
+                  <IconButton
+                    onClick={handleCommentModeToggle}
+                    title={commentButtonTitle}
+                    color={isCommentMode ? "secondary" : "primary"}
+                    size="small"
+                  >
+                    {session ? <Comment fontSize="small" /> : <Login fontSize="small" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
             </>
           ) : (
             <Stack
@@ -215,13 +235,17 @@ export default function SharePage() {
               >
                 Export SVG
               </Button>
-              <Button
-                variant={isCommentMode ? "contained" : "outlined"}
-                startIcon={<Comment />}
-                onClick={() => setIsCommentMode(!isCommentMode)}
-              >
-                {isCommentMode ? "Commenting" : "Comments"}
-              </Button>
+              <Tooltip title={commentButtonTitle}>
+                <span>
+                  <Button
+                    variant={isCommentMode ? "contained" : "outlined"}
+                    startIcon={session ? <Comment /> : <Login />}
+                    onClick={handleCommentModeToggle}
+                  >
+                    {session ? (isCommentMode ? "Commenting" : "Comments") : "Login to Comment"}
+                  </Button>
+                </span>
+              </Tooltip>
             </Stack>
           )}
         </Toolbar>
@@ -244,10 +268,12 @@ export default function SharePage() {
             comments={comments}
             threadedComments={threadedComments}
             selectedCommentId={selectedCommentId}
-            isCommentMode={isCommentMode}
+            isCommentMode={isCommentMode && !!session}
             onCommentClick={(commentId) => {
-              setSelectedCommentId(commentId);
-              handleCommentPanelOpen();
+              if (session) {
+                setSelectedCommentId(commentId);
+                handleCommentPanelOpen();
+              }
             }}
             onDiagramClick={async () => {
               // Handle diagram click for adding comments
@@ -281,6 +307,13 @@ export default function SharePage() {
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   Anyone with this link can view the diagram and export it.
                 </Typography>
+                {!session && (
+                  <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
+                    <a href={`/login?callbackUrl=${encodeURIComponent(window.location.href)}`} style={{ color: 'inherit', textDecoration: 'underline' }}>
+                      Login to enable commenting features
+                    </a>
+                  </Typography>
+                )}
               </Box>
               <IconButton size="small" onClick={() => setDetailsOpen(false)}>
                 <CloseIcon fontSize="small" />

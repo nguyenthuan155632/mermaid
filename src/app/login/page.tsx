@@ -8,8 +8,13 @@ import {
   Paper,
 } from "@mui/material";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/editor';
+
   return (
     <Container maxWidth="sm">
       <Box
@@ -60,7 +65,7 @@ export default function LoginPage() {
                 <path fill="#EA4335" d="M8.98 4.72c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.35L4.5 7.42a4.77 4.77 0 0 1 4.48-2.7z" />
               </svg>
             }
-            onClick={() => signIn("google", { callbackUrl: "/editor" })}
+            onClick={() => signIn("google", { callbackUrl })}
             sx={{
               py: 1.5,
               bgcolor: "white",
@@ -78,5 +83,13 @@ export default function LoginPage() {
         </Paper>
       </Box>
     </Container>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

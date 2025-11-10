@@ -23,7 +23,7 @@ export default function CommentIndicator({
   const isContextMenuOpen = Boolean(anchorEl);
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
-  const dragMetadataRef = useRef({ isPointerDown: false, startX: 0, startY: 0, didDrag: false });
+  const dragMetadataRef = useRef({ isPointerDown: false, startX: 0, startY: 0, didDrag: false, startTime: 0 });
   const clickSuppressedRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
   const pointerCaptureTargetRef = useRef<HTMLElement | null>(null);
@@ -67,6 +67,7 @@ export default function CommentIndicator({
       startX: event.clientX,
       startY: event.clientY,
       didDrag: false,
+      startTime: Date.now(),
     };
 
     const handleMove = (moveEvent: PointerEvent) => {
@@ -75,8 +76,16 @@ export default function CommentIndicator({
       const deltaX = moveEvent.clientX - dragMetadataRef.current.startX;
       const deltaY = moveEvent.clientY - dragMetadataRef.current.startY;
       const distance = Math.abs(deltaX) + Math.abs(deltaY);
+      const elapsedTime = Date.now() - dragMetadataRef.current.startTime;
 
-      if (!dragMetadataRef.current.didDrag && distance < 4) {
+      // For touch events, require both distance threshold AND 2-second delay
+      // For mouse events, keep the original behavior (distance only)
+      const isTouch = moveEvent.pointerType === "touch";
+      const canStartDrag = isTouch ?
+        (distance >= 4 && elapsedTime >= 2000) :
+        (distance >= 4);
+
+      if (!dragMetadataRef.current.didDrag && !canStartDrag) {
         return;
       }
 
@@ -99,7 +108,7 @@ export default function CommentIndicator({
       }
       cleanupDragListeners(handleMove, handleUp, handleCancel);
       const { didDrag } = dragMetadataRef.current;
-      dragMetadataRef.current = { isPointerDown: false, startX: 0, startY: 0, didDrag: false };
+      dragMetadataRef.current = { isPointerDown: false, startX: 0, startY: 0, didDrag: false, startTime: 0 };
       activePointerIdRef.current = null;
 
       if (!didDrag) {
