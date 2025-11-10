@@ -915,6 +915,7 @@ export default function CommentPopup({
             mb: 2,
             cursor: isDragging ? 'grabbing' : 'grab',
             userSelect: 'none',
+            touchAction: 'none',
           }}
           onPointerDown={handleDragPointerDown}
         >

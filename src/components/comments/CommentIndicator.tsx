@@ -200,6 +200,7 @@ export default function CommentIndicator({
         pointerEvents: "auto",
         willChange: "transform",
         transition: (isPanning || isPinching || isDragging) ? "none" : "transform 0.2s",
+        touchAction: "none",
       }}
     >
       <Tooltip
@@ -240,6 +241,7 @@ export default function CommentIndicator({
               transform: "scale(1.1)",
             },
             position: "relative",
+            touchAction: "none",
           }}
         >
           {comment.isResolved && (
