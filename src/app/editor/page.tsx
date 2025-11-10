@@ -634,8 +634,14 @@ function EditorContent() {
             alignItems: "center",
             gap: 1,
             flexGrow: 1,
-            minWidth: 0
-          }}>
+            minWidth: 0,
+            cursor: "pointer",
+            "&:hover": {
+              opacity: 0.8
+            }
+          }}
+            onClick={() => router.push("/diagrams")}
+          >
             <Box
               component="img"
               src="/favicon.png"

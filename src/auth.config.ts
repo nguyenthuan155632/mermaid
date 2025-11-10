@@ -134,9 +134,42 @@ export const authConfig = {
       return session;
     },
     async jwt({ token, user }) {
+      // On initial sign-in, user object is provided
       if (user) {
         token.sub = user.id;
+        token.email = user.email;
+        return token;
       }
+
+      // On subsequent requests, verify the user still exists
+      // This handles cases where the user was deleted or JWT has stale data
+      if (token.sub && token.email) {
+        const dbUser = await db
+          .select({ id: users.id, email: users.email, name: users.name, image: users.image })
+          .from(users)
+          .where(eq(users.id, token.sub))
+          .limit(1);
+
+        // If user doesn't exist by ID, try to find by email (handles DB resets)
+        if (dbUser.length === 0 && token.email) {
+          const userByEmail = await db
+            .select({ id: users.id, email: users.email, name: users.name, image: users.image })
+            .from(users)
+            .where(eq(users.email, token.email as string))
+            .limit(1);
+
+          if (userByEmail.length > 0) {
+            // Update token with correct user ID
+            token.sub = userByEmail[0].id;
+            token.name = userByEmail[0].name;
+            token.picture = userByEmail[0].image;
+          } else {
+            // User doesn't exist at all, invalidate token
+            throw new Error("User not found in database");
+          }
+        }
+      }
+
       return token;
     },
   },

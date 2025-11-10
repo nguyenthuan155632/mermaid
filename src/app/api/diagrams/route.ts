@@ -57,6 +57,18 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // Handle foreign key constraint violation (user doesn't exist in DB)
+    if (error && typeof error === "object" && "code" in error && error.code === "23503") {
+      return NextResponse.json(
+        {
+          error: "Session expired or invalid. Please sign out and sign back in.",
+          code: "INVALID_USER_SESSION"
+        },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
