@@ -25,6 +25,8 @@ export default function CommentIndicator({
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const dragMetadataRef = useRef({ isPointerDown: false, startX: 0, startY: 0, didDrag: false });
   const clickSuppressedRef = useRef(false);
+  const activePointerIdRef = useRef<number | null>(null);
+  const pointerCaptureTargetRef = useRef<HTMLElement | null>(null);
 
   const toDiagramCoordinates = (clientX: number, clientY: number) => {
     const rect = getContainerRect?.();
@@ -36,13 +38,30 @@ export default function CommentIndicator({
     return { x, y };
   };
 
-  const cleanupDragListeners = (moveHandler: (event: MouseEvent) => void, upHandler: (event: MouseEvent) => void) => {
-    window.removeEventListener("mousemove", moveHandler);
-    window.removeEventListener("mouseup", upHandler);
+  const cleanupDragListeners = (
+    moveHandler: (event: PointerEvent) => void,
+    upHandler: (event: PointerEvent) => void,
+    cancelHandler: (event: PointerEvent) => void,
+  ) => {
+    window.removeEventListener("pointermove", moveHandler);
+    window.removeEventListener("pointerup", upHandler);
+    window.removeEventListener("pointercancel", cancelHandler);
   };
 
-  const handleDragStart = (event: React.MouseEvent<HTMLElement>) => {
-    if (event.button !== 0) return;
+  const releasePointer = (pointerId: number) => {
+    if (pointerCaptureTargetRef.current?.hasPointerCapture?.(pointerId)) {
+      pointerCaptureTargetRef.current.releasePointerCapture(pointerId);
+    }
+    pointerCaptureTargetRef.current = null;
+  };
+
+  const handleDragStart = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    pointerCaptureTargetRef.current = event.currentTarget as HTMLElement;
+    pointerCaptureTargetRef.current.setPointerCapture?.(event.pointerId);
+    activePointerIdRef.current = event.pointerId;
     dragMetadataRef.current = {
       isPointerDown: true,
       startX: event.clientX,
@@ -50,7 +69,8 @@ export default function CommentIndicator({
       didDrag: false,
     };
 
-    const handleMove = (moveEvent: MouseEvent) => {
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (activePointerIdRef.current !== moveEvent.pointerId) return;
       if (!dragMetadataRef.current.isPointerDown) return;
       const deltaX = moveEvent.clientX - dragMetadataRef.current.startX;
       const deltaY = moveEvent.clientY - dragMetadataRef.current.startY;
@@ -73,19 +93,32 @@ export default function CommentIndicator({
       onDrag?.(coords);
     };
 
-    const handleUp = async (upEvent: MouseEvent) => {
-      cleanupDragListeners(handleMove, handleUp);
+    const endDrag = async (event: PointerEvent, shouldPersist: boolean) => {
+      if (activePointerIdRef.current !== event.pointerId) {
+        return;
+      }
+      cleanupDragListeners(handleMove, handleUp, handleCancel);
       const { didDrag } = dragMetadataRef.current;
       dragMetadataRef.current = { isPointerDown: false, startX: 0, startY: 0, didDrag: false };
+      activePointerIdRef.current = null;
 
       if (!didDrag) {
+        releasePointer(event.pointerId);
         clickSuppressedRef.current = false;
         return;
       }
 
       setIsDragging(false);
-      const coords = toDiagramCoordinates(upEvent.clientX, upEvent.clientY);
+      if (!shouldPersist) {
+        releasePointer(event.pointerId);
+        setDragPosition(null);
+        clickSuppressedRef.current = false;
+        return;
+      }
+
+      const coords = toDiagramCoordinates(event.clientX, event.clientY);
       if (!coords) {
+        releasePointer(event.pointerId);
         setDragPosition(null);
         clickSuppressedRef.current = false;
         return;
@@ -97,13 +130,23 @@ export default function CommentIndicator({
       } catch (error) {
         console.error("Failed to finish drag:", error);
       } finally {
+        releasePointer(event.pointerId);
         setDragPosition(null);
         clickSuppressedRef.current = false;
       }
     };
 
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
+    const handleUp = (upEvent: PointerEvent) => {
+      void endDrag(upEvent, true);
+    };
+
+    const handleCancel = (cancelEvent: PointerEvent) => {
+      void endDrag(cancelEvent, false);
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleCancel);
   };
   // Calculate the position considering zoom and pan
   // Since diagram is centered, we position relative to center using 50% positioning
@@ -179,7 +222,7 @@ export default function CommentIndicator({
       >
         <IconButton
           onClick={handleClick}
-          onMouseDown={handleDragStart}
+          onPointerDown={handleDragStart}
           onContextMenu={handleContextMenu}
           sx={{
             width: 32,

@@ -720,6 +720,7 @@ export default function CommentPopup({
   const dragOriginRef = useRef(position);
   const dragPositionRef = useRef(position);
   const [isDragging, setIsDragging] = useState(false);
+  const activePointerIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     dragPositionRef.current = dragPosition;
@@ -737,7 +738,10 @@ export default function CommentPopup({
       return;
     }
 
-    const handleMouseMove = (event: MouseEvent) => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (activePointerIdRef.current !== event.pointerId) {
+        return;
+      }
       const deltaX = event.clientX - dragStartRef.current.x;
       const deltaY = event.clientY - dragStartRef.current.y;
       const nextPosition = {
@@ -748,18 +752,25 @@ export default function CommentPopup({
       onDrag?.(nextPosition);
     };
 
-    const handleMouseUp = () => {
+    const handlePointerEnd = (event: PointerEvent) => {
+      if (activePointerIdRef.current !== event.pointerId) {
+        return;
+      }
       setIsDragging(false);
+      activePointerIdRef.current = null;
+      popupRef.current?.releasePointerCapture?.(event.pointerId);
       dragOriginRef.current = dragPositionRef.current;
       onDragEnd?.(dragPositionRef.current);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
     };
   }, [isDragging, onDrag, onDragEnd]);
 
@@ -830,8 +841,8 @@ export default function CommentPopup({
   };
 
   const popupPosition = calculatePopupPosition(dragPosition);
-  const handleDragMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.button !== 0) {
+  const handleDragPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
 
@@ -841,8 +852,11 @@ export default function CommentPopup({
     }
 
     event.preventDefault();
+    event.stopPropagation();
     dragStartRef.current = { x: event.clientX, y: event.clientY };
     dragOriginRef.current = dragPositionRef.current;
+    activePointerIdRef.current = event.pointerId;
+    popupRef.current?.setPointerCapture?.(event.pointerId);
     setIsDragging(true);
   };
   const handleThreadResolvedToggle = async () => {
@@ -902,7 +916,7 @@ export default function CommentPopup({
             cursor: isDragging ? 'grabbing' : 'grab',
             userSelect: 'none',
           }}
-          onMouseDown={handleDragMouseDown}
+          onPointerDown={handleDragPointerDown}
         >
           <Typography variant="h6" sx={{
             fontWeight: 600,
