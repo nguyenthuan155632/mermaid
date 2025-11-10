@@ -352,6 +352,7 @@ const ThreadCommentRenderer: React.FC<{
             ) : (
               <Typography
                 variant="body2"
+                component="div"
                 sx={{
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
@@ -359,10 +360,18 @@ const ThreadCommentRenderer: React.FC<{
                   fontSize: "13px",
                   lineHeight: "18px",
                   mt: 0.75,
+                  "& b, & strong": {
+                    fontWeight: 700,
+                  },
+                  "& i, & em": {
+                    fontStyle: "italic",
+                  },
+                  "& strike, & s": {
+                    textDecoration: "line-through",
+                  },
                 }}
-              >
-                {comment.content}
-              </Typography>
+                dangerouslySetInnerHTML={{ __html: comment.content }}
+              />
             )}
 
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 1 }}>
@@ -423,7 +432,7 @@ const ThreadCommentRenderer: React.FC<{
               <Box sx={{ mt: 1.5, ml: -0.5 }}>
                 <CommentForm
                   onSubmit={async (data) => {
-                    if (onCreateComment && onSetReplyingToCommentId && diagramId) {
+                    if (onCreateComment && onSetReplyingToCommentId) {
                       const targetPosition = threadRoot || comment;
                       try {
                         await onCreateComment({
@@ -905,7 +914,7 @@ export default function CommentPanel({
                       onCreateComment={handleCreateComment}
                       onSetEditingCommentId={setEditingCommentId}
                       onSetReplyingToCommentId={setReplyingToCommentId}
-                      diagramId=""
+                      diagramId={diagramId}
                       loading={loading}
                       refreshComments={refreshComments}
                       isThreadResolved={isThreadResolved}

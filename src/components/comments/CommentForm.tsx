@@ -1,16 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Box,
-  TextField,
   Button,
   Stack,
   Typography,
   CircularProgress,
+  IconButton,
+  Tooltip,
+  Divider,
+  Popover,
 } from "@mui/material";
-import { Save as SaveIcon, Close as CloseIcon } from "@mui/icons-material";
+import {
+  Save as SaveIcon,
+  Close as CloseIcon,
+  FormatBold,
+  FormatItalic,
+  FormatStrikethrough,
+  FormatColorText,
+} from "@mui/icons-material";
 import { CommentFormProps } from "./types";
+
+const TEXT_COLORS = [
+  "#202124", "#5f6368", "#1a73e8", "#ea4335", "#34a853",
+  "#fbbc04", "#ff6d01", "#9334e6", "#e91e63", "#00bcd4",
+];
 
 export default function CommentForm({
   onSubmit,
@@ -22,19 +37,35 @@ export default function CommentForm({
   showCancelButton = true,
 }: CommentFormProps & { showCancelButton?: boolean }) {
   const [content, setContent] = useState(initialData?.content || "");
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [colorAnchor, setColorAnchor] = useState<HTMLElement | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Initialize editor with existing content
+  useEffect(() => {
+    if (editorRef.current && initialData?.content) {
+      editorRef.current.innerHTML = initialData.content;
+    }
+  }, [initialData?.content]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
 
     try {
+      // Get the HTML content from the editor
+      const htmlContent = editorRef.current?.innerHTML || "";
+      
       await onSubmit({
-        content: content.trim(),
+        content: htmlContent.trim(),
         positionX: initialData?.positionX || 0,
         positionY: initialData?.positionY || 0,
       });
       // Clear form after successful submission
       setContent("");
+      if (editorRef.current) {
+        editorRef.current.innerHTML = "";
+      }
     } catch (error) {
       // Don't clear form on error
       console.error('Form submission failed:', error);
@@ -48,6 +79,31 @@ export default function CommentForm({
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
+  };
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      const text = editorRef.current.innerText;
+      setContent(text);
+    }
+  };
+
+  const applyFormat = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+  };
+
+  const handleColorClick = (event: React.MouseEvent<HTMLElement>) => {
+    setColorAnchor(event.currentTarget);
+  };
+
+  const handleColorClose = () => {
+    setColorAnchor(null);
+  };
+
+  const applyColor = (color: string) => {
+    applyFormat("foreColor", color);
+    handleColorClose();
   };
 
   return (
@@ -73,35 +129,157 @@ export default function CommentForm({
       </Typography>
 
       <form onSubmit={handleSubmit}>
-        <TextField
-          multiline
-          rows={3}
-          fullWidth
-          placeholder={placeholder || "Type your comment here..."}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
-          autoFocus
+        {/* Formatting Toolbar */}
+        <Stack
+          direction="row"
+          spacing={0.5}
           sx={{
-            "& .MuiOutlinedInput-root": {
-              fontSize: "14px",
-              lineHeight: "20px",
-              color: "#202124",
-              "& fieldset": {
-                borderColor: "#e9ecef",
-                borderWidth: "1px",
-              },
-              "&:hover fieldset": {
-                borderColor: "#c2c7d0",
-              },
-              "&.Mui-focused fieldset": {
-                borderColor: "#1a73e8",
-                borderWidth: "2px",
-              },
+            mb: 1,
+            pb: 1,
+            borderBottom: "1px solid #e9ecef",
+          }}
+        >
+          <Tooltip title="Bold (Ctrl+B)" arrow>
+            <IconButton
+              size="small"
+              onClick={() => applyFormat("bold")}
+              disabled={loading}
+              sx={{
+                color: "#5f6368",
+                "&:hover": { bgcolor: "#f1f3f4" },
+                "&:disabled": { color: "#9aa0a6" },
+              }}
+            >
+              <FormatBold fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Italic (Ctrl+I)" arrow>
+            <IconButton
+              size="small"
+              onClick={() => applyFormat("italic")}
+              disabled={loading}
+              sx={{
+                color: "#5f6368",
+                "&:hover": { bgcolor: "#f1f3f4" },
+                "&:disabled": { color: "#9aa0a6" },
+              }}
+            >
+              <FormatItalic fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Strikethrough" arrow>
+            <IconButton
+              size="small"
+              onClick={() => applyFormat("strikeThrough")}
+              disabled={loading}
+              sx={{
+                color: "#5f6368",
+                "&:hover": { bgcolor: "#f1f3f4" },
+                "&:disabled": { color: "#9aa0a6" },
+              }}
+            >
+              <FormatStrikethrough fontSize="small" />
+            </IconButton>
+          </Tooltip>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+          <Tooltip title="Text color" arrow>
+            <IconButton
+              size="small"
+              onClick={handleColorClick}
+              disabled={loading}
+              sx={{
+                color: "#5f6368",
+                "&:hover": { bgcolor: "#f1f3f4" },
+                "&:disabled": { color: "#9aa0a6" },
+              }}
+            >
+              <FormatColorText fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+
+        {/* Color Picker Popover */}
+        <Popover
+          open={Boolean(colorAnchor)}
+          anchorEl={colorAnchor}
+          onClose={handleColorClose}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "left",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "left",
+          }}
+        >
+          <Box sx={{ p: 1.5, display: "flex", flexWrap: "wrap", width: 200 }}>
+            {TEXT_COLORS.map((color) => (
+              <IconButton
+                key={color}
+                onClick={() => applyColor(color)}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  m: 0.5,
+                  bgcolor: color,
+                  "&:hover": {
+                    bgcolor: color,
+                    opacity: 0.8,
+                    transform: "scale(1.1)",
+                  },
+                  border: "2px solid #fff",
+                  boxShadow: "0 0 0 1px #dadce0",
+                }}
+              />
+            ))}
+          </Box>
+        </Popover>
+
+        {/* Rich Text Editor */}
+        <Box
+          ref={editorRef}
+          contentEditable={!loading}
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          suppressContentEditableWarning
+          sx={{
+            minHeight: "80px",
+            maxHeight: "300px",
+            overflowY: "auto",
+            p: 1.5,
+            fontSize: "14px",
+            lineHeight: "20px",
+            color: "#202124",
+            border: "1px solid",
+            borderColor: isFocused ? "#1a73e8" : "#e9ecef",
+            borderWidth: isFocused ? "2px" : "1px",
+            borderRadius: "4px",
+            outline: "none",
+            bgcolor: loading ? "#f8f9fa" : "#ffffff",
+            cursor: loading ? "not-allowed" : "text",
+            transition: "all 0.2s",
+            "&:hover": {
+              borderColor: loading ? "#e9ecef" : isFocused ? "#1a73e8" : "#c2c7d0",
             },
-            "& .MuiInputBase-input::placeholder": {
+            "&:empty:before": {
+              content: `"${placeholder || "Type your comment here..."}"`,
               color: "#9aa0a6",
+              pointerEvents: "none",
+            },
+            "& b, & strong": {
+              fontWeight: 700,
+            },
+            "& i, & em": {
+              fontStyle: "italic",
+            },
+            "& strike, & s": {
+              textDecoration: "line-through",
             },
           }}
         />

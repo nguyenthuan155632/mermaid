@@ -170,6 +170,7 @@ export default function CommentThread({
         {/* Comment content */}
         <Typography
           variant="body2"
+          component="div"
           sx={{
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
@@ -178,10 +179,18 @@ export default function CommentThread({
             lineHeight: "18px",
             opacity: comment.isResolved ? 0.7 : 1,
             textDecoration: comment.isResolved ? "line-through" : "none",
+            "& b, & strong": {
+              fontWeight: 700,
+            },
+            "& i, & em": {
+              fontStyle: "italic",
+            },
+            "& strike, & s": {
+              textDecoration: "line-through",
+            },
           }}
-        >
-          {comment.content}
-        </Typography>
+          dangerouslySetInnerHTML={{ __html: comment.content }}
+        />
 
         {/* Actions */}
         <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
