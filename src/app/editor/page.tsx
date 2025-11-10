@@ -267,6 +267,21 @@ function EditorContent() {
     };
 
     const init = async () => {
+      // Check if this is a fresh start - if so, start with blank diagram
+      if (freshParam === "1") {
+        try {
+          localStorage.removeItem("mermaid-draft");
+          localStorage.removeItem(LAST_DIAGRAM_ID_STORAGE_KEY);
+        } catch {
+          // ignore storage errors
+        }
+        setDiagramId(null);
+        setTitle("");
+        setCode("");
+        setSnapshots([]);
+        return;
+      }
+
       if (diagramIdParam) {
         const success = await loadDiagramById(diagramIdParam);
         if (!success) {
@@ -301,22 +316,13 @@ function EditorContent() {
     };
 
     init();
-  }, [diagramIdParam, fetchSnapshots]);
+  }, [diagramIdParam, fetchSnapshots, freshParam]);
 
+  // Clean up URL after fresh start
   useEffect(() => {
     if (freshParam === "1") {
-      try {
-        localStorage.removeItem("mermaid-draft");
-        localStorage.removeItem(LAST_DIAGRAM_ID_STORAGE_KEY);
-      } catch {
-        // ignore storage errors
-      }
-      setDiagramId(null);
-      setTitle("");
-      setCode("");
-      setSnapshots([]);
+      // Remove the fresh parameter from URL after initialization
       router.replace("/editor");
-      return;
     }
   }, [freshParam, router]);
 
