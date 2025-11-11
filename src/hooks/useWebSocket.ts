@@ -348,43 +348,15 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
 
         // Attempt to reconnect if not a normal closure
         if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
+          reconnectAttemptsRef.current++;
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          console.log(`[WS] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
+
           reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttemptsRef.current++;
-            // Use a direct connection attempt here to avoid circular dependency
-            if (channelId) {
-              const wsUrl = getWebSocketUrl(channelId);
-              console.log(`[WS] Reconnecting to: ${wsUrl}`);
-              const newWs = new WebSocket(wsUrl);
-              wsRef.current = newWs;
-
-              newWs.onopen = () => {
-                setIsConnected(true);
-                reconnectAttemptsRef.current = 0;
-
-                if (newWs) {
-                  const userInfo = getEffectiveUserInfo();
-                  const joinPayload = {
-                    userId: userInfo.userId,
-                    userName: userInfo.userName,
-                    userEmail: userInfo.userEmail,
-                    userImage: userInfo.userImage,
-                    isAnonymous: userInfo.isAnonymous,
-                    ...(userInfo.isAnonymous && userInfo.anonymousSessionId
-                      ? { anonymousSessionId: userInfo.anonymousSessionId }
-                      : {}),
-                  };
-
-                  newWs.send(JSON.stringify({
-                    type: "join_room",
-                    data: joinPayload,
-                    userId: userInfo.userId,
-                    timestamp: Date.now(),
-                  }));
-                }
-              };
-            }
+            connect();
           }, delay);
+        } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+          console.error(`[WS] Max reconnection attempts (${maxReconnectAttempts}) reached. Giving up.`);
         }
       };
 
