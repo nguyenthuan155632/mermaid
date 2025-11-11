@@ -83,6 +83,7 @@ function EditorContent() {
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [diagramId, setDiagramId] = useState<string | null>(null);
+  const [shareToken, setShareToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewSvg, setPreviewSvg] = useState<string>("");
   const [hasError, setHasError] = useState(false);
@@ -116,8 +117,8 @@ function EditorContent() {
   const historySectionOpen = isMobile ? true : sidebarSections.history;
   const { data: session } = useSession();
 
-  // Calculate current user ID - use anonymous session ID if in anonymous mode
-  const currentUserId = anonymousMode ? getAnonymousSessionId() : session?.user?.id;
+  // Calculate current user ID - always fall back to an anonymous session ID if not logged in
+  const currentUserId = session?.user?.id ?? getAnonymousSessionId();
 
   // WebSocket integration
   const {
@@ -126,12 +127,14 @@ function EditorContent() {
     lastCodeChange,
     cursors,
     lastCommentEvent,
+    commentPositions,
     sendCodeChange,
+    sendCommentPosition,
     sendCommentCreated,
     sendCommentUpdated,
     sendCommentDeleted,
     sendCommentResolved,
-  } = useWebSocket(diagramId, anonymousMode);
+  } = useWebSocket(shareToken || diagramId, anonymousMode);
 
   // Debug logging for UserPresence visibility
   useEffect(() => {
@@ -329,6 +332,7 @@ function EditorContent() {
           setTitle(data.title);
           setCode(data.code);
           setAnonymousMode(data.anonymousMode || false);
+          setShareToken(data.shareToken || null);
           fetchSnapshots(data.id);
           return true;
         }
@@ -348,6 +352,7 @@ function EditorContent() {
           // ignore storage errors
         }
         setDiagramId(null);
+        setShareToken(null);
         setTitle("");
         setCode("");
         setSnapshots([]);
@@ -358,6 +363,7 @@ function EditorContent() {
         const success = await loadDiagramById(diagramIdParam);
         if (!success) {
           loadDraftFromStorage();
+          setShareToken(null);
           setSnapshots([]);
         }
         return;
@@ -384,6 +390,7 @@ function EditorContent() {
       }
 
       loadDraftFromStorage();
+      setShareToken(null);
       setSnapshots([]);
     };
 
@@ -468,6 +475,7 @@ function EditorContent() {
       }
 
       const data = await response.json();
+      setShareToken(data.shareToken || null);
       if (!diagramId) {
         setDiagramId(data.id);
         // Update URL with the new diagram ID
@@ -508,6 +516,7 @@ function EditorContent() {
       setTitle(data.title);
       setCode(data.code);
       setDiagramId(data.id);
+      setShareToken(data.shareToken || null);
       await fetchSnapshots(data.id);
       alert("Diagram reverted to the selected snapshot");
     } catch {
@@ -550,6 +559,7 @@ function EditorContent() {
       }
 
       const data = await response.json();
+      setShareToken(data.shareToken || null);
       const shareUrl = `${window.location.origin}/share/${data.shareToken}`;
       await navigator.clipboard.writeText(shareUrl);
       alert("Share link copied to clipboard!");
@@ -1229,6 +1239,13 @@ function EditorContent() {
             onCreateComment={createComment}
             currentUserId={currentUserId}
             anonymousMode={anonymousMode}
+            commentPositions={commentPositions}
+            lastCommentEvent={lastCommentEvent}
+            sendCommentPosition={sendCommentPosition}
+            sendCommentCreated={handleCommentCreated}
+            sendCommentUpdated={handleCommentUpdated}
+            sendCommentDeleted={handleCommentDeleted}
+            sendCommentResolved={handleCommentResolved}
           />
         </Box>
       </Box>

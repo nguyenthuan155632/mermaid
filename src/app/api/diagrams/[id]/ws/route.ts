@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { db } from "@/db";
 import { diagrams } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 
 // WebSocket message types
 interface WSMessage {
@@ -19,7 +19,7 @@ interface UserInfo {
 }
 
 // Store active connections per diagram
-const diagramRooms = new Map<string, Set<WebSocket>>();
+const channelRooms = new Map<string, Set<WebSocket>>();
 const userSockets = new Map<WebSocket, UserInfo>();
 
 export async function GET() {
@@ -49,10 +49,10 @@ export function initializeWebSocketServer() {
       // Extract diagram ID from URL
       const url = new URL(request.url || "", `http://${request.headers.host}`);
       const pathParts = url.pathname.split("/");
-      const diagramId = pathParts[pathParts.indexOf("diagrams") + 1];
+      const requestedChannel = pathParts[pathParts.indexOf("diagrams") + 1];
 
-      if (!diagramId) {
-        ws.close(1008, "Diagram ID required");
+      if (!requestedChannel) {
+        ws.close(1008, "Channel identifier required");
         return;
       }
 
@@ -73,11 +73,23 @@ export function initializeWebSocketServer() {
       const diagram = await db
         .select()
         .from(diagrams)
-        .where(eq(diagrams.id, diagramId))
+        .where(
+          or(
+            eq(diagrams.id, requestedChannel),
+            eq(diagrams.shareToken, requestedChannel)
+          )
+        )
         .limit(1);
 
       if (diagram.length === 0) {
         ws.close(1008, "Diagram not found");
+        return;
+      }
+      const diagramRecord = diagram[0];
+      const channelId = diagramRecord.shareToken ?? diagramRecord.id;
+
+      if (!channelId) {
+        ws.close(1011, "Channel unavailable");
         return;
       }
 
@@ -91,13 +103,13 @@ export function initializeWebSocketServer() {
       userSockets.set(ws, userInfo);
 
       // Add to diagram room
-      if (!diagramRooms.has(diagramId)) {
-        diagramRooms.set(diagramId, new Set());
+      if (!channelRooms.has(channelId)) {
+        channelRooms.set(channelId, new Set());
       }
-      diagramRooms.get(diagramId)!.add(ws);
+      channelRooms.get(channelId)!.add(ws);
 
       // Send current users list to new user
-      const roomUsers = Array.from(diagramRooms.get(diagramId)!)
+      const roomUsers = Array.from(channelRooms.get(channelId)!)
         .map(socket => userSockets.get(socket))
         .filter(Boolean);
 
@@ -109,7 +121,7 @@ export function initializeWebSocketServer() {
       }));
 
       // Notify other users about new user
-      broadcastToRoom(diagramId, {
+      broadcastToRoom(channelId, {
         type: "user_presence",
         data: {
           users: roomUsers,
@@ -131,7 +143,7 @@ export function initializeWebSocketServer() {
           }
 
           // Broadcast to room (excluding sender)
-          broadcastToRoom(diagramId, message, ws);
+          broadcastToRoom(channelId, message, ws);
 
         } catch (error) {
           console.error("Error parsing WebSocket message:", error);
@@ -141,11 +153,11 @@ export function initializeWebSocketServer() {
       // Handle disconnection
       ws.on("close", () => {
         // Remove from room
-        const room = diagramRooms.get(diagramId);
+        const room = channelRooms.get(channelId);
         if (room) {
           room.delete(ws);
           if (room.size === 0) {
-            diagramRooms.delete(diagramId);
+            channelRooms.delete(channelId);
           }
         }
 
@@ -153,11 +165,11 @@ export function initializeWebSocketServer() {
         userSockets.delete(ws);
 
         // Notify other users
-        const remainingUsers = Array.from(diagramRooms.get(diagramId) || [])
+        const remainingUsers = Array.from(channelRooms.get(channelId) || [])
           .map(socket => userSockets.get(socket))
           .filter(Boolean);
 
-        broadcastToRoom(diagramId, {
+        broadcastToRoom(channelId, {
           type: "user_presence",
           data: {
             users: remainingUsers,
@@ -183,8 +195,8 @@ export function initializeWebSocketServer() {
   return wss;
 }
 
-function broadcastToRoom(diagramId: string, message: WSMessage, excludeWs?: WebSocket) {
-  const room = diagramRooms.get(diagramId);
+function broadcastToRoom(channelId: string, message: WSMessage, excludeWs?: WebSocket) {
+  const room = channelRooms.get(channelId);
   if (!room) return;
 
   const messageStr = JSON.stringify(message);
@@ -197,8 +209,8 @@ function broadcastToRoom(diagramId: string, message: WSMessage, excludeWs?: WebS
 }
 
 // Helper function to get room info
-export function getRoomInfo(diagramId: string) {
-  const room = diagramRooms.get(diagramId);
+export function getRoomInfo(channelId: string) {
+  const room = channelRooms.get(channelId);
   if (!room) return null;
 
   return {

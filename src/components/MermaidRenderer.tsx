@@ -23,7 +23,12 @@ import CommentOverlay from "./comments/CommentOverlay";
 import CommentPopup from "./comments/CommentPopup";
 import { CommentWithUser, ThreadedComment } from "./comments/types";
 import { useComments } from "./comments/useComments";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import {
+  CommentPositionsMap,
+  CommentEvent,
+  CommentPosition,
+  LastCommentEvent
+} from "@/hooks/useWebSocket";
 
 interface MermaidRendererProps {
   code: string;
@@ -44,6 +49,13 @@ interface MermaidRendererProps {
   onDeleteComment?: (commentId: string) => void;
   currentUserId?: string;
   anonymousMode?: boolean;
+  commentPositions?: CommentPositionsMap;
+  lastCommentEvent?: LastCommentEvent | null;
+  sendCommentPosition?: (position: CommentPosition) => void;
+  sendCommentCreated?: (event: CommentEvent) => void;
+  sendCommentUpdated?: (event: CommentEvent) => void;
+  sendCommentDeleted?: (event: CommentEvent) => void;
+  sendCommentResolved?: (event: CommentEvent) => void;
 }
 
 const MERMAID_ERROR_PATTERNS = [/syntax error in text/i, /mermaid version/i];
@@ -66,34 +78,37 @@ export default function MermaidRenderer({
   onDeleteComment,
   currentUserId,
   anonymousMode = false,
+  commentPositions: externalCommentPositions,
+  lastCommentEvent: externalLastCommentEvent,
+  sendCommentPosition: externalSendCommentPosition,
+  sendCommentCreated: externalSendCommentCreated,
+  sendCommentUpdated: externalSendCommentUpdated,
+  sendCommentDeleted: externalSendCommentDeleted,
+  sendCommentResolved: externalSendCommentResolved,
 }: MermaidRendererProps) {
   const { data: session } = useSession();
-
-  // WebSocket hook for real-time comment synchronization (initialize first to get callbacks)
-  const {
-    sendCommentPosition,
-    commentPositions,
-    lastCommentEvent,
-    sendCommentCreated,
-    sendCommentUpdated,
-    sendCommentDeleted,
-    sendCommentResolved,
-  } = useWebSocket(diagramId || null, anonymousMode);
+  const commentPositions = useMemo(() => externalCommentPositions ?? {}, [externalCommentPositions]);
+  const lastCommentEvent = externalLastCommentEvent ?? null;
+  const sendCommentPosition = externalSendCommentPosition;
+  const sendCommentCreated = externalSendCommentCreated;
+  const sendCommentUpdated = externalSendCommentUpdated;
+  const sendCommentDeleted = externalSendCommentDeleted;
+  const sendCommentResolved = externalSendCommentResolved;
 
   // Use the comments hook for real functionality with WebSocket callbacks
   const commentsHook = useComments({
     diagramId: diagramId || "",
     onCommentCreated: (comment) => {
-      sendCommentCreated({ commentId: comment.id, comment });
+      sendCommentCreated?.({ commentId: comment.id, comment });
     },
     onCommentUpdated: (comment) => {
-      sendCommentUpdated({ commentId: comment.id, comment });
+      sendCommentUpdated?.({ commentId: comment.id, comment });
     },
     onCommentDeleted: (commentId) => {
-      sendCommentDeleted({ commentId });
+      sendCommentDeleted?.({ commentId });
     },
     onCommentResolved: (commentId, isResolved) => {
-      sendCommentResolved({ commentId, isResolved });
+      sendCommentResolved?.({ commentId, isResolved });
     },
   });
   const {
@@ -225,7 +240,7 @@ export default function MermaidRenderer({
       });
 
       // Send real-time update to other users
-      sendCommentPosition({
+      sendCommentPosition?.({
         commentId,
         x: position.x,
         y: position.y,

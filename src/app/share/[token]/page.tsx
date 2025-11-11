@@ -47,10 +47,8 @@ export default function SharePage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  // Calculate current user ID - use anonymous session ID if in anonymous mode
-  const currentUserId = (diagram?.anonymousMode && !session?.user?.id)
-    ? getAnonymousSessionId()
-    : session?.user?.id;
+  // Calculate current user ID - always fall back to an anonymous session ID if not logged in
+  const currentUserId = session?.user?.id ?? getAnonymousSessionId();
 
   // Comment-related state - reusing the same pattern from editor
   const [isCommentMode, setIsCommentMode] = useState(false);
@@ -59,16 +57,17 @@ export default function SharePage() {
 
   // WebSocket integration for real-time collaboration
   const {
-    isConnected,
     connectedUsers,
     cursors,
     lastCodeChange,
     lastCommentEvent,
+    commentPositions,
+    sendCommentPosition,
     sendCommentCreated,
     sendCommentUpdated,
     sendCommentDeleted,
     sendCommentResolved,
-  } = useWebSocket(diagram?.id || null, diagram?.anonymousMode || false);
+  } = useWebSocket(token || diagram?.id || null, diagram?.anonymousMode || false);
 
   // WebSocket comment broadcast callbacks - use useCallback with empty deps since sendCommentXXX use refs internally
   const handleCommentCreated = useCallback((comment: unknown) => {
@@ -369,6 +368,13 @@ export default function SharePage() {
             onCreateComment={createComment}
             currentUserId={currentUserId}
             anonymousMode={diagram?.anonymousMode}
+            commentPositions={commentPositions}
+            lastCommentEvent={lastCommentEvent}
+            sendCommentPosition={sendCommentPosition}
+            sendCommentCreated={handleCommentCreated}
+            sendCommentUpdated={handleCommentUpdated}
+            sendCommentDeleted={handleCommentDeleted}
+            sendCommentResolved={handleCommentResolved}
           />
         </Box>
         {detailsOpen && (
