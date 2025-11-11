@@ -61,6 +61,7 @@ app.prepare().then(() => {
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
+        console.log(`[WS] Received message type: ${message.type} from user: ${userId || message.userId} in room: ${diagramId}`);
 
         switch (message.type) {
           case 'join_room':
@@ -127,12 +128,15 @@ app.prepare().then(() => {
 
           case 'code_change':
             if (diagramId && userId) {
+              console.log(`[WS] Broadcasting code_change to room ${diagramId}`);
               broadcastToRoom(diagramId, {
                 type: 'code_change',
                 data: message.data,
                 userId,
                 timestamp: Date.now()
               }, ws); // Don't send back to sender
+            } else {
+              console.warn(`[WS] Cannot broadcast code_change - diagramId: ${diagramId}, userId: ${userId}`);
             }
             break;
 
