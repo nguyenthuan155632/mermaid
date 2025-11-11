@@ -3,7 +3,7 @@
 import { Box, Badge, Tooltip, IconButton, Menu, MenuItem } from "@mui/material";
 import { Comment as CommentIcon, CheckCircle, MenuOpen, Delete } from "@mui/icons-material";
 import { CommentIndicatorProps } from "./types";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 
 export default function CommentIndicator({
   comment,
@@ -170,11 +170,25 @@ export default function CommentIndicator({
   // Since diagram is centered, we position relative to center using 50% positioning
   // The actual positioning will be handled by the transform style
 
-  const getCommentNumber = () => {
-    // This would be calculated based on the order of comments
-    // For now, we'll use a simple approach
-    return comment.id.slice(0, 3).toUpperCase();
-  };
+  // Generate a unique, short identifier for the comment badge
+  const getCommentNumber = useMemo(() => {
+    // Create a hash from the UUID to generate a consistent short identifier
+    // This ensures each comment gets a unique number that doesn't change
+    const hash = (str: string) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      return Math.abs(hash);
+    };
+
+    const commentHash = hash(comment.id);
+    // Generate a number between 1-99 for the badge
+    const number = (commentHash % 99) + 1;
+    return number.toString();
+  }, [comment.id]);
 
   const handleContextMenu = (event: React.MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -322,7 +336,7 @@ export default function CommentIndicator({
 
       {/* Comment number badge */}
       <Badge
-        badgeContent={getCommentNumber()}
+        badgeContent={getCommentNumber}
         sx={{
           position: "absolute",
           top: -8,
