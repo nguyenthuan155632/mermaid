@@ -30,6 +30,7 @@ import { exportToPNG, exportToSVG } from "@/lib/export";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { UserPresence } from "@/components/realtime/UserPresence";
 import { LiveCursors } from "@/components/realtime/LiveCursors";
+import { getAnonymousSessionId } from "@/lib/anonymousSession";
 
 export default function SharePage() {
   const params = useParams();
@@ -45,6 +46,11 @@ export default function SharePage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Calculate current user ID - use anonymous session ID if in anonymous mode
+  const currentUserId = (diagram?.anonymousMode && !session?.user?.id)
+    ? getAnonymousSessionId()
+    : session?.user?.id;
 
   // Comment-related state - reusing the same pattern from editor
   const [isCommentMode, setIsCommentMode] = useState(false);
@@ -318,21 +324,19 @@ export default function SharePage() {
 
       <Box sx={{ flex: 1, position: "relative", bgcolor: "background.default" }}>
         {/* User Presence Indicator - positioned below zoom toolbar */}
-        {isConnected && connectedUsers.size > 0 && (
-          <Box sx={{ position: "absolute", top: { xs: 60, md: 60 }, right: 8, zIndex: 1000 }}>
-            <UserPresence
-              users={connectedUsers}
-              currentUserId={session?.user?.id}
-              anonymousMode={diagram?.anonymousMode}
-            />
-          </Box>
-        )}
+        <Box sx={{ position: "absolute", top: { xs: 60, md: 60 }, right: 8, zIndex: 1000 }}>
+          <UserPresence
+            users={connectedUsers}
+            currentUserId={currentUserId}
+            anonymousMode={diagram?.anonymousMode}
+          />
+        </Box>
 
         {/* Live Cursors Overlay */}
         <LiveCursors
           cursors={cursors}
           users={connectedUsers}
-          currentUserId={session?.user?.id}
+          currentUserId={currentUserId}
           editorRef={editorRef}
           anonymousMode={diagram?.anonymousMode}
         />
@@ -363,7 +367,7 @@ export default function SharePage() {
             }}
             diagramId={diagram?.id}
             onCreateComment={createComment}
-            currentUserId={session?.user?.id}
+            currentUserId={currentUserId}
             anonymousMode={diagram?.anonymousMode}
           />
         </Box>

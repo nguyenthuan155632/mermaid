@@ -4,13 +4,20 @@ import { comments, users, diagrams } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { z } from "zod";
+import {
+  getAnonymousDisplayName,
+  getAnonymousAvatarColor,
+  getAnonymousAvatarInitials,
+  generateDeterministicSessionId,
+} from "@/lib/anonymousSession";
 
 const createCommentSchema = z.object({
   content: z.string().min(1, "Comment content is required"),
   positionX: z.number(),
   positionY: z.number(),
-  parentId: z.string().optional(),
+  parentId: z.string().uuid().optional().nullable(),
   isAnonymous: z.boolean().optional(),
+  anonymousSessionId: z.string().uuid().optional().nullable(),
 });
 
 export async function GET(
@@ -29,6 +36,7 @@ export async function GET(
         isResolved: comments.isResolved,
         parentId: comments.parentId,
         isAnonymous: comments.isAnonymous,
+        anonymousSessionId: comments.anonymousSessionId,
         createdAt: comments.createdAt,
         updatedAt: comments.updatedAt,
         user: {
@@ -42,13 +50,46 @@ export async function GET(
       .orderBy(comments.createdAt);
 
     // Ensure dates are properly serialized as ISO strings
-    const serializedComments = commentsData.map(comment => ({
-      ...comment,
-      createdAt: comment.createdAt.toISOString(),
-      updatedAt: comment.updatedAt.toISOString(),
-      // For anonymous comments, provide a default user object
-      user: comment.isAnonymous ? { id: 'anonymous', email: 'Anonymous' } : comment.user,
-    }));
+    const serializedComments = commentsData.map(comment => {
+      const baseComment = {
+        ...comment,
+        createdAt: comment.createdAt.toISOString(),
+        updatedAt: comment.updatedAt.toISOString(),
+      };
+
+      // For anonymous comments with session ID, compute display name and avatar
+      if (comment.isAnonymous && comment.anonymousSessionId) {
+        return {
+          ...baseComment,
+          anonymousSessionId: comment.anonymousSessionId,
+          anonymousDisplayName: getAnonymousDisplayName(comment.anonymousSessionId),
+          anonymousAvatarColor: getAnonymousAvatarColor(comment.anonymousSessionId),
+          anonymousAvatarInitials: getAnonymousAvatarInitials(comment.anonymousSessionId),
+          user: { id: 'anonymous', email: 'Anonymous' },
+        };
+      }
+
+      // For anonymous comments without session ID (legacy), generate deterministic session ID
+      if (comment.isAnonymous) {
+        // Generate a deterministic session ID based on comment ID
+        // This ensures the same comment always gets the same animal/color
+        const deterministicSessionId = generateDeterministicSessionId(comment.id);
+        return {
+          ...baseComment,
+          anonymousSessionId: deterministicSessionId,
+          anonymousDisplayName: getAnonymousDisplayName(deterministicSessionId),
+          anonymousAvatarColor: getAnonymousAvatarColor(deterministicSessionId),
+          anonymousAvatarInitials: getAnonymousAvatarInitials(deterministicSessionId),
+          user: { id: 'anonymous', email: 'Anonymous' },
+        };
+      }
+
+      // For authenticated users
+      return {
+        ...baseComment,
+        user: comment.user,
+      };
+    });
 
     return NextResponse.json({ items: serializedComments });
   } catch {
@@ -66,7 +107,13 @@ export async function POST(
   try {
     const { id: diagramId } = await params;
     const body = await request.json();
-    const validatedData = createCommentSchema.parse(body);
+
+    // Remove undefined values before validation
+    const cleanedBody = Object.fromEntries(
+      Object.entries(body).filter(([, value]) => value !== undefined)
+    );
+
+    const validatedData = createCommentSchema.parse(cleanedBody);
 
     // Check if diagram allows anonymous comments
     const [diagram] = await db
@@ -92,12 +139,25 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Ensure anonymousSessionId is set for anonymous comments
+    // For new comments, client MUST provide anonymousSessionId
+    // We only generate deterministic session ID for legacy comments (old comments without session ID)
+    if (isAnonymousRequest && !validatedData.anonymousSessionId) {
+      // If it's an anonymous request but no session ID provided, this is an error
+      // The client should always provide the session ID from localStorage
+      return NextResponse.json(
+        { error: "Anonymous session ID is required for anonymous comments" },
+        { status: 400 }
+      );
+    }
+
     const [newComment] = await db
       .insert(comments)
       .values({
         diagramId,
         userId: isAnonymousRequest ? null : (session?.user?.id || null),
         isAnonymous: isAnonymousRequest,
+        anonymousSessionId: isAnonymousRequest ? validatedData.anonymousSessionId : null,
         content: validatedData.content,
         positionX: validatedData.positionX,
         positionY: validatedData.positionY,
@@ -115,6 +175,7 @@ export async function POST(
         isResolved: comments.isResolved,
         parentId: comments.parentId,
         isAnonymous: comments.isAnonymous,
+        anonymousSessionId: comments.anonymousSessionId,
         createdAt: comments.createdAt,
         updatedAt: comments.updatedAt,
         user: {
@@ -128,25 +189,63 @@ export async function POST(
       .limit(1);
 
     // Ensure dates are properly serialized as ISO strings
-    const serializedComment = {
+    const baseComment = {
       ...commentWithUser,
       createdAt: commentWithUser.createdAt.toISOString(),
       updatedAt: commentWithUser.updatedAt.toISOString(),
-      // For anonymous comments, provide a default user object
-      user: commentWithUser.isAnonymous ? { id: 'anonymous', email: 'Anonymous' } : commentWithUser.user,
+    };
+
+    // For anonymous comments with session ID, compute display name and avatar
+    if (commentWithUser.isAnonymous && commentWithUser.anonymousSessionId) {
+      const serializedComment = {
+        ...baseComment,
+        anonymousSessionId: commentWithUser.anonymousSessionId,
+        anonymousDisplayName: getAnonymousDisplayName(commentWithUser.anonymousSessionId),
+        anonymousAvatarColor: getAnonymousAvatarColor(commentWithUser.anonymousSessionId),
+        anonymousAvatarInitials: getAnonymousAvatarInitials(commentWithUser.anonymousSessionId),
+        user: { id: 'anonymous', email: 'Anonymous' },
+      };
+      return NextResponse.json(serializedComment);
+    }
+
+    // For anonymous comments without session ID (legacy), generate deterministic session ID
+    if (commentWithUser.isAnonymous) {
+      const deterministicSessionId = generateDeterministicSessionId(commentWithUser.id);
+      const serializedComment = {
+        ...baseComment,
+        anonymousSessionId: deterministicSessionId,
+        anonymousDisplayName: getAnonymousDisplayName(deterministicSessionId),
+        anonymousAvatarColor: getAnonymousAvatarColor(deterministicSessionId),
+        anonymousAvatarInitials: getAnonymousAvatarInitials(deterministicSessionId),
+        user: { id: 'anonymous', email: 'Anonymous' },
+      };
+      return NextResponse.json(serializedComment);
+    }
+
+    // For authenticated users
+    const serializedComment = {
+      ...baseComment,
+      user: commentWithUser.user,
     };
 
     return NextResponse.json(serializedComment);
   } catch (error) {
+    console.error("Error creating comment:", error);
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input", details: error.errors },
+        {
+          error: "Invalid input",
+          details: error.errors,
+          message: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+        },
         { status: 400 }
       );
     }
 
+    const errorMessage = error instanceof Error ? error.message : "Failed to create comment";
     return NextResponse.json(
-      { error: "Failed to create comment" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

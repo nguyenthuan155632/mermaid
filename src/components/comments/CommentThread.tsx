@@ -100,16 +100,16 @@ export default function CommentThread({
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  bgcolor: "#9e9e9e",
+                  bgcolor: comment.anonymousAvatarColor || "#9e9e9e",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: "12px",
                   fontWeight: 600,
-                  color: "#5f6368",
+                  color: comment.anonymousAvatarColor ? "#ffffff" : "#5f6368",
                 }}
               >
-                ?
+                {comment.anonymousAvatarInitials || "?"}
               </Box>
               <Box>
                 <Typography variant="subtitle2" sx={{
@@ -118,7 +118,7 @@ export default function CommentThread({
                   fontSize: "14px",
                   lineHeight: "18px"
                 }}>
-                  {anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown")}
+                  {comment.anonymousDisplayName || (anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown"))}
                 </Typography>
                 <Typography variant="caption" sx={{
                   color: "#5f6368",

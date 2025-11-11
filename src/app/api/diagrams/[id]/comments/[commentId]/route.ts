@@ -4,6 +4,12 @@ import { comments, users, diagrams } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { z } from "zod";
+import {
+  getAnonymousDisplayName,
+  getAnonymousAvatarColor,
+  getAnonymousAvatarInitials,
+  generateDeterministicSessionId,
+} from "@/lib/anonymousSession";
 
 const updateCommentSchema = z.object({
   content: z.string().min(1, "Comment content is required").optional(),
@@ -92,6 +98,8 @@ export async function PUT(
         positionY: comments.positionY,
         isResolved: comments.isResolved,
         parentId: comments.parentId,
+        isAnonymous: comments.isAnonymous,
+        anonymousSessionId: comments.anonymousSessionId,
         createdAt: comments.createdAt,
         updatedAt: comments.updatedAt,
         user: {
@@ -105,10 +113,43 @@ export async function PUT(
       .limit(1);
 
     // Ensure dates are properly serialized as ISO strings
-    const serializedComment = {
+    const baseComment = {
       ...commentWithUser,
       createdAt: commentWithUser.createdAt.toISOString(),
       updatedAt: commentWithUser.updatedAt.toISOString(),
+    };
+
+    // For anonymous comments with session ID, compute display name and avatar
+    if (commentWithUser.isAnonymous && commentWithUser.anonymousSessionId) {
+      const serializedComment = {
+        ...baseComment,
+        anonymousSessionId: commentWithUser.anonymousSessionId,
+        anonymousDisplayName: getAnonymousDisplayName(commentWithUser.anonymousSessionId),
+        anonymousAvatarColor: getAnonymousAvatarColor(commentWithUser.anonymousSessionId),
+        anonymousAvatarInitials: getAnonymousAvatarInitials(commentWithUser.anonymousSessionId),
+        user: { id: 'anonymous', email: 'Anonymous' },
+      };
+      return NextResponse.json(serializedComment);
+    }
+
+    // For anonymous comments without session ID (legacy), generate deterministic session ID
+    if (commentWithUser.isAnonymous) {
+      const deterministicSessionId = generateDeterministicSessionId(commentWithUser.id);
+      const serializedComment = {
+        ...baseComment,
+        anonymousSessionId: deterministicSessionId,
+        anonymousDisplayName: getAnonymousDisplayName(deterministicSessionId),
+        anonymousAvatarColor: getAnonymousAvatarColor(deterministicSessionId),
+        anonymousAvatarInitials: getAnonymousAvatarInitials(deterministicSessionId),
+        user: { id: 'anonymous', email: 'Anonymous' },
+      };
+      return NextResponse.json(serializedComment);
+    }
+
+    // For authenticated users
+    const serializedComment = {
+      ...baseComment,
+      user: commentWithUser.user,
     };
 
     return NextResponse.json(serializedComment);

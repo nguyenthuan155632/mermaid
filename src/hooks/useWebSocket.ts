@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { getAnonymousSessionId } from "@/lib/anonymousSession";
 
 interface WSMessage {
   type: "join_room" | "leave_room" | "code_change" | "cursor_move" | "user_presence" | "comment_position" | "comment_created" | "comment_updated" | "comment_deleted" | "comment_resolved";
@@ -14,6 +15,7 @@ export interface UserInfo {
   email?: string;
   image?: string;
   isAnonymous?: boolean;
+  anonymousSessionId?: string;
 }
 
 export interface CursorPosition {
@@ -90,13 +92,11 @@ const wsStateManager = {
   },
 
   clearState() {
-    this.state = {
-      connectedUsers: new Map(),
-      lastCodeChange: null,
-      cursors: new Map(),
-      commentPositions: {},
-      lastCommentEvent: null,
-    };
+    // Don't clear connectedUsers - they should persist across reconnects
+    this.state.lastCodeChange = null;
+    this.state.cursors = new Map();
+    this.state.commentPositions = {};
+    this.state.lastCommentEvent = null;
     this.notifyListeners();
   },
 
@@ -190,20 +190,19 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
         // Send user info as headers (since we can't set headers in WebSocket constructor)
         if (wsRef.current) {
           if (anonymousModeRef.current) {
-            // Send anonymous user info with unique display name
-            const anonymousUserId = `anonymous_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+            // Use the same anonymous session ID from localStorage for consistency
+            const anonymousSessionId = getAnonymousSessionId();
+            const anonymousUserId = anonymousSessionId; // Use session ID as user ID
             anonymousUserIdRef.current = anonymousUserId; // Store for later use
-            // Create a short unique identifier for display (last 6 chars of the random part)
-            const shortId = anonymousUserId.split('_').pop()?.substring(0, 6) || 'anon';
-            const displayName = `Anonymous ${shortId}`;
             wsRef.current.send(JSON.stringify({
               type: "join_room",
               data: {
                 userId: anonymousUserId,
-                userName: displayName,
+                userName: "Anonymous", // Will be computed on server/client side
                 userEmail: "anonymous@example.com",
                 userImage: null,
                 isAnonymous: true,
+                anonymousSessionId: anonymousSessionId,
               },
               userId: anonymousUserId,
               timestamp: Date.now(),
@@ -235,6 +234,15 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
               if (typeof message.data === "object" && message.data !== null) {
                 const data = message.data as { users?: UserInfo[]; action?: string; user?: UserInfo };
                 if (data.users) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('[WS] Received user_presence:', {
+                      usersCount: data.users.length,
+                      action: data.action,
+                      users: data.users.map(u => ({ id: u.id, name: u.name, isAnonymous: u.isAnonymous, anonymousSessionId: u.anonymousSessionId }))
+                    });
+                  }
+                  // Always update - server sends the current state of users
+                  // Empty array means no other users, which is valid
                   wsStateManager.updateConnectedUsers(data.users);
                 } else {
                   console.warn('⚠️ user_presence message has no users array!', data);
@@ -318,20 +326,19 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
 
                 if (newWs) {
                   if (anonymousModeRef.current) {
-                    // Send anonymous user info with unique display name
-                    const anonymousUserId = `anonymous_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+                    // Use the same anonymous session ID from localStorage for consistency
+                    const anonymousSessionId = getAnonymousSessionId();
+                    const anonymousUserId = anonymousSessionId; // Use session ID as user ID
                     anonymousUserIdRef.current = anonymousUserId; // Store for later use
-                    // Create a short unique identifier for display (last 6 chars of the random part)
-                    const shortId = anonymousUserId.split('_').pop()?.substring(0, 6) || 'anon';
-                    const displayName = `Anonymous ${shortId}`;
                     newWs.send(JSON.stringify({
                       type: "join_room",
                       data: {
                         userId: anonymousUserId,
-                        userName: displayName,
+                        userName: "Anonymous", // Will be computed on server/client side
                         userEmail: "anonymous@example.com",
                         userImage: null,
                         isAnonymous: true,
+                        anonymousSessionId: anonymousSessionId,
                       },
                       userId: anonymousUserId,
                       timestamp: Date.now(),
@@ -405,6 +412,12 @@ export function useWebSocket(diagramId: string | null, anonymousMode: boolean = 
   }, [session?.user?.id]);
 
   const sendCommentPosition = useCallback((commentPosition: CommentPosition) => {
+    // Always update the local shared map so the initiator sees the new position immediately
+    wsStateManager.updateCommentPosition(commentPosition.commentId, {
+      x: commentPosition.x,
+      y: commentPosition.y,
+    });
+
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       // Allow sending position updates in anonymous mode or when authenticated
       const userId = anonymousModeRef.current && anonymousUserIdRef.current

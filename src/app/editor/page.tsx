@@ -59,6 +59,7 @@ import { useSession } from "next-auth/react";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { UserPresence } from "@/components/realtime/UserPresence";
 import { LiveCursors } from "@/components/realtime/LiveCursors";
+import { getAnonymousSessionId } from "@/lib/anonymousSession";
 
 const LAST_DIAGRAM_ID_STORAGE_KEY = "mermaid-last-diagram-id";
 
@@ -115,6 +116,9 @@ function EditorContent() {
   const historySectionOpen = isMobile ? true : sidebarSections.history;
   const { data: session } = useSession();
 
+  // Calculate current user ID - use anonymous session ID if in anonymous mode
+  const currentUserId = anonymousMode ? getAnonymousSessionId() : session?.user?.id;
+
   // WebSocket integration
   const {
     isConnected,
@@ -128,6 +132,18 @@ function EditorContent() {
     sendCommentDeleted,
     sendCommentResolved,
   } = useWebSocket(diagramId, anonymousMode);
+
+  // Debug logging for UserPresence visibility
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Editor] State changed:', {
+        isConnected,
+        connectedUsersSize: connectedUsers.size,
+        currentUserId,
+        anonymousMode,
+      });
+    }
+  }, [isConnected, connectedUsers, currentUserId, anonymousMode]);
 
   // Comment-related state
   const [isCommentMode, setIsCommentMode] = useState(false);
@@ -1159,21 +1175,29 @@ function EditorContent() {
           }}
         >
           {/* User Presence Indicator - positioned below zoom toolbar */}
-          {isConnected && connectedUsers.size > 0 && (
-            <Box sx={{ position: "absolute", top: 60, right: 10, zIndex: 1000 }}>
-              <UserPresence
-                users={connectedUsers}
-                currentUserId={session?.user?.id}
-                anonymousMode={anonymousMode}
-              />
-            </Box>
-          )}
+          <Box
+            sx={{
+              position: "absolute",
+              top: 60,
+              right: 10,
+              zIndex: 1000,
+              pointerEvents: "auto",
+              visibility: "visible",
+              opacity: 1,
+            }}
+          >
+            <UserPresence
+              users={connectedUsers}
+              currentUserId={currentUserId}
+              anonymousMode={anonymousMode}
+            />
+          </Box>
 
           {/* Live Cursors Overlay */}
           <LiveCursors
             cursors={cursors}
             users={connectedUsers}
-            currentUserId={session?.user?.id}
+            currentUserId={currentUserId}
             editorRef={editorRef}
             anonymousMode={anonymousMode}
           />
@@ -1203,7 +1227,7 @@ function EditorContent() {
             }}
             diagramId={diagramId || undefined}
             onCreateComment={createComment}
-            currentUserId={session?.user?.id}
+            currentUserId={currentUserId}
             anonymousMode={anonymousMode}
           />
         </Box>

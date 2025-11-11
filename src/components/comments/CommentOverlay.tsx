@@ -54,7 +54,7 @@ export default function CommentOverlay({
       // Create the comment
       if (onCreateComment) {
         await onCreateComment({
-          content: data.content,
+          ...data,
           positionX: data.positionX,
           positionY: data.positionY,
           isAnonymous: anonymousMode || !currentUserId,

@@ -107,6 +107,7 @@ export const comments = pgTable("comments", {
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" }),
   isAnonymous: boolean("is_anonymous").default(false).notNull(),
+  anonymousSessionId: uuid("anonymous_session_id"),
   parentId: uuid("parent_id"),
   content: text("content").notNull(),
   positionX: real("position_x").notNull(),

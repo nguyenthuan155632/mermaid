@@ -1,5 +1,11 @@
 import { Box, Avatar, Typography, Tooltip, Chip } from "@mui/material";
 import { UserInfo } from "@/hooks/useWebSocket";
+import {
+  getAnonymousDisplayName,
+  getAnonymousAvatarColor,
+  getAnonymousAvatarInitials,
+  generateDeterministicSessionId,
+} from "@/lib/anonymousSession";
 
 interface UserPresenceProps {
   users: Map<string, UserInfo>;
@@ -15,8 +21,26 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
   const visibleUsers = otherUsers.slice(0, maxVisible);
   const remainingCount = otherUsers.length - visibleUsers.length;
 
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[UserPresence]', {
+      totalUsers: usersArray.length,
+      currentUserId,
+      otherUsersCount: otherUsers.length,
+      willRender: otherUsers.length > 0,
+      users: usersArray.map(u => ({ id: u.id, name: u.name, isAnonymous: u.isAnonymous, anonymousSessionId: u.anonymousSessionId }))
+    });
+  }
+
   if (otherUsers.length === 0) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[UserPresence] Returning null - no other users');
+    }
     return null;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[UserPresence] Rendering component with', otherUsers.length, 'users');
   }
 
   return (
@@ -29,6 +53,9 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
         backgroundColor: "rgba(25, 118, 210, 0.04)",
         borderRadius: 1,
         border: "1px solid rgba(25, 118, 210, 0.12)",
+        visibility: "visible",
+        opacity: 1,
+        pointerEvents: "auto",
       }}
     >
       <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
@@ -38,22 +65,34 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
       {/* Visible user avatars */}
       {visibleUsers.map((user: UserInfo, index: number) => {
         const isAnonymousUser = anonymousMode || user.isAnonymous;
-        // For anonymous users, create unique display name from ID if name is generic
+
+        // Get display name and avatar info for anonymous users
         let displayName: string;
+        let avatarColor: string;
+        let avatarInitials: string;
+
         if (isAnonymousUser) {
-          if (user.name && user.name !== 'Anonymous User' && user.name.startsWith('Anonymous ')) {
-            // Already has unique name like "Anonymous abc123"
-            displayName = user.name;
+          // Try to use anonymousSessionId if available
+          let sessionId: string;
+          if (user.anonymousSessionId) {
+            sessionId = user.anonymousSessionId;
           } else if (user.id) {
-            // Generate unique name from ID
-            const idPart = user.id.split('_').pop()?.substring(0, 6) || user.id.substring(user.id.length - 6);
-            displayName = `Anonymous ${idPart}`;
+            // Fallback: generate deterministic session ID from user ID
+            sessionId = generateDeterministicSessionId(user.id);
           } else {
-            displayName = 'Anonymous User';
+            // Last resort: use a default
+            sessionId = generateDeterministicSessionId(`user-${index}`);
           }
+
+          displayName = getAnonymousDisplayName(sessionId);
+          avatarColor = getAnonymousAvatarColor(sessionId);
+          avatarInitials = getAnonymousAvatarInitials(sessionId);
         } else {
           displayName = user.name || user.email || 'Anonymous';
+          avatarColor = "#9e9e9e";
+          avatarInitials = getUserInitials(user);
         }
+
         return (
           <Tooltip
             key={user.id || `user-${index}`}
@@ -71,10 +110,11 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
                 border: "2px solid white",
                 marginLeft: index > 0 ? -1 : 0,
                 boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                backgroundColor: isAnonymousUser ? "grey.500" : undefined,
+                backgroundColor: isAnonymousUser ? avatarColor : undefined,
+                color: isAnonymousUser ? "#ffffff" : undefined,
               }}
             >
-              {getUserInitials({ ...user, isAnonymous: isAnonymousUser, name: displayName })}
+              {isAnonymousUser ? avatarInitials : getUserInitials(user)}
             </Avatar>
           </Tooltip>
         );
@@ -100,23 +140,6 @@ export function UserPresence({ users, currentUserId, maxVisible = 3, anonymousMo
 }
 
 function getUserInitials(user: UserInfo): string {
-  // For anonymous users, show first letter of the unique ID part
-  if (user.isAnonymous) {
-    // If name includes a unique ID (e.g., "Anonymous abc123"), show "A" + first letter of ID
-    if (user.name && user.name.includes(' ') && user.name !== 'Anonymous User') {
-      const parts = user.name.split(' ');
-      if (parts.length > 1 && parts[1]) {
-        return `A${parts[1].substring(0, 1).toUpperCase()}`;
-      }
-    }
-    // Fallback: show first letter from ID if available
-    if (user.id) {
-      const idPart = user.id.split('_').pop()?.substring(0, 1) || user.id.substring(user.id.length - 1);
-      return `A${idPart.toUpperCase()}`;
-    }
-    return "A";
-  }
-
   if (user.name) {
     const names = user.name.trim().split(" ");
     if (names.length >= 2) {

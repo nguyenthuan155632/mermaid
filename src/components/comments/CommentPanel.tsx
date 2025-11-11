@@ -248,15 +248,15 @@ const ThreadCommentRenderer: React.FC<{
               height: avatarSize,
               fontSize: "13px",
               fontWeight: 600,
-              bgcolor: notionPalette.accent,
-              color: notionPalette.textPrimary,
+              bgcolor: comment.anonymousAvatarColor || notionPalette.accent,
+              color: comment.anonymousAvatarColor ? "#ffffff" : notionPalette.textPrimary,
               border: `1px solid ${notionPalette.border}`,
               boxShadow: "0 6px 14px rgba(47, 52, 55, 0.18)",
               flexShrink: 0,
               marginLeft: "-12px",
             }}
           >
-            ?
+            {comment.anonymousAvatarInitials || "?"}
           </Avatar>
 
           <Box
@@ -277,7 +277,7 @@ const ThreadCommentRenderer: React.FC<{
                     lineHeight: "18px",
                   }}
                 >
-                  {anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown")}
+                  {comment.anonymousDisplayName || (anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown"))}
                 </Typography>
                 <Typography
                   variant="caption"
@@ -444,7 +444,7 @@ const ThreadCommentRenderer: React.FC<{
                       const targetPosition = threadRoot || comment;
                       try {
                         await onCreateComment({
-                          content: data.content,
+                          ...data,
                           positionX: targetPosition.positionX,
                           positionY: targetPosition.positionY,
                           parentId: comment.id,
@@ -462,6 +462,7 @@ const ThreadCommentRenderer: React.FC<{
                   }}
                   placeholder="Replying to Anonymous..."
                   loading={loading}
+                  anonymousMode={anonymousMode}
                 />
               </Box>
             )}
@@ -1006,7 +1007,7 @@ export default function CommentPanel({
                     try {
                       setLoading(true);
                       await handleCreateComment({
-                        content: data.content,
+                        ...data,
                         positionX: targetThread.positionX,
                         positionY: targetThread.positionY,
                         parentId: targetThread.id,
@@ -1024,6 +1025,7 @@ export default function CommentPanel({
                   placeholder="Add a comment..."
                   loading={loading}
                   showCancelButton={false}
+                  anonymousMode={anonymousMode}
                 />
               </Box>
             )}

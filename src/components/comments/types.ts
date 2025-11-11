@@ -5,6 +5,9 @@ export interface CommentWithUser extends Comment {
     id: string;
     email: string;
   };
+  anonymousDisplayName?: string;
+  anonymousAvatarColor?: string;
+  anonymousAvatarInitials?: string;
   replies?: CommentWithUser[];
 }
 
@@ -24,6 +27,7 @@ export interface CommentFormData {
   positionY: number;
   parentId?: string;
   isAnonymous?: boolean;
+  anonymousSessionId?: string;
 }
 
 export interface CommentModeState {
@@ -78,7 +82,7 @@ export interface CommentThreadProps {
 }
 
 export interface CommentPanelProps {
-  comments: Comment[];
+  comments: CommentWithUser[];
   threadedComments: ThreadedComment[];
   selectedCommentId: string | null;
   isOpen: boolean;

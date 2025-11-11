@@ -177,7 +177,7 @@ const ThreadCommentRenderer: React.FC<{
     // Show email or Anonymous based on anonymousMode
     // When anonymousMode is ON: hide email and show "Anonymous"
     // When anonymousMode is OFF: show actual email or "Unknown" if no email
-    const displayName = anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown");
+    const displayName = comment.anonymousDisplayName || (anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown"));
 
     const isDeleteEnabled = false;
     const canReply = Boolean(currentUserId && depth < MAX_COMMENT_DEPTH && !isThreadResolved);
@@ -296,15 +296,15 @@ const ThreadCommentRenderer: React.FC<{
               height: avatarSize,
               fontSize: "13px",
               fontWeight: 600,
-              bgcolor: notionPalette.accent,
-              color: notionPalette.textPrimary,
+              bgcolor: comment.anonymousAvatarColor || notionPalette.accent,
+              color: comment.anonymousAvatarColor ? "#ffffff" : notionPalette.textPrimary,
               border: `1px solid ${notionPalette.border}`,
               boxShadow: "0 6px 14px rgba(47, 52, 55, 0.18)",
               flexShrink: 0,
               marginLeft: "-12px",
             }}
           >
-            ?
+            {comment.anonymousAvatarInitials || "?"}
           </Avatar>
 
           <Box
@@ -492,7 +492,7 @@ const ThreadCommentRenderer: React.FC<{
                       const targetPosition = threadRoot || comment;
                       try {
                         await onCreateComment({
-                          content: data.content,
+                          ...data,
                           positionX: targetPosition.positionX,
                           positionY: targetPosition.positionY,
                           parentId: comment.id,
@@ -510,6 +510,7 @@ const ThreadCommentRenderer: React.FC<{
                   }}
                   placeholder={`Replying to ${displayName}...`}
                   loading={loading}
+                  anonymousMode={anonymousMode}
                 />
               </Box>
             )}
@@ -1097,7 +1098,7 @@ export default function CommentPopup({
                       setLoading(true);
                       // Get the root comment ID from the current thread
                       await onCreateComment({
-                        content: data.content,
+                        ...data,
                         positionX: baseThreadRoot.positionX,
                         positionY: baseThreadRoot.positionY,
                         parentId: rootCommentId, // Reply to the root comment of the current thread
@@ -1117,6 +1118,7 @@ export default function CommentPopup({
                 placeholder="Add a comment..."
                 loading={loading}
                 showCancelButton={false}
+                anonymousMode={anonymousMode}
               />
             </Box>
           )}

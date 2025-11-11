@@ -218,14 +218,17 @@ export default function CommentIndicator({
     const propPosition = { x: comment.positionX, y: comment.positionY };
     const lastCommitted = lastCommittedPositionRef.current;
 
-    // If the prop position is very close to last committed (within 1 unit), 
-    // it means the update has propagated successfully - update our ref
-    const deltaX = Math.abs(propPosition.x - lastCommitted.x);
-    const deltaY = Math.abs(propPosition.y - lastCommitted.y);
-
-    if (deltaX < 1 && deltaY < 1) {
-      lastCommittedPositionRef.current = propPosition;
+    // IMPORTANT: Do NOT update position from props when user is actively dragging
+    // This prevents the race condition where WebSocket updates from other users
+    // would override the current user's drag position
+    if (isDragging) {
+      return lastCommitted;
     }
+
+    // Always sync lastCommittedPositionRef with prop position when not dragging
+    // This ensures that when another user moves the comment, this user can drag from the new position
+    // We update the ref even if position changed significantly (from WebSocket updates)
+    lastCommittedPositionRef.current = propPosition;
 
     return propPosition;
   })();
@@ -248,7 +251,7 @@ export default function CommentIndicator({
         title={
           <Box>
             <Box sx={{ fontWeight: "bold", mb: 0.5 }}>
-              {anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown")}
+              {comment.anonymousDisplayName || (anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown"))}
             </Box>
             <Box
               sx={{
@@ -357,7 +360,7 @@ export default function CommentIndicator({
           <MenuOpen fontSize="small" sx={{ mr: 1, color: '#5f6368' }} />
           Open in Sidebar
         </MenuItem>
-        {onDelete && currentUserId && comment.user.id === currentUserId && (
+        {onDelete && currentUserId && comment.user?.id === currentUserId && (
           <MenuItem onClick={handleDeleteAction} sx={{
             fontSize: '13px',
             color: '#d32f2f',

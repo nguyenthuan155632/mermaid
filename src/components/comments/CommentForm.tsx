@@ -21,6 +21,7 @@ import {
   FormatColorText,
 } from "@mui/icons-material";
 import { CommentFormProps } from "./types";
+import { getAnonymousSessionId } from "@/lib/anonymousSession";
 
 const TEXT_COLORS = [
   "#202124", "#5f6368", "#1a73e8", "#ea4335", "#34a853",
@@ -77,6 +78,8 @@ export default function CommentForm({
         positionX: initialData?.positionX || 0,
         positionY: initialData?.positionY || 0,
         isAnonymous: anonymousMode,
+        // Always include anonymousSessionId when in anonymous mode (never undefined)
+        ...(anonymousMode && { anonymousSessionId: getAnonymousSessionId() }),
       });
       // Clear form after successful submission
       setContent("");
