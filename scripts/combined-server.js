@@ -54,6 +54,7 @@ app.prepare().then(() => {
   });
 
   wss.on('connection', (ws, request) => {
+    console.log(`[WS] New WebSocket connection from ${request.socket.remoteAddress}, URL: ${request.url}`);
     let userId = null;
     let diagramId = null;
     let userInfo = null;
@@ -211,7 +212,8 @@ app.prepare().then(() => {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      console.log(`[WS] Connection closed - code: ${code}, reason: ${reason}, userId: ${userId}, diagramId: ${diagramId}`);
       if (userId && diagramId) {
         // Remove user from room only if this is the current connection
         if (rooms.has(diagramId)) {
