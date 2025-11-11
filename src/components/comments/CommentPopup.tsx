@@ -843,32 +843,23 @@ export default function CommentPopup({
   }, [onClose]);
 
   // Calculate popup position to stay within viewport
-  const calculatePopupPosition = (anchor: { x: number; y: number }) => {
+  const calculatePopupPosition = () => {
     const popupWidth = 480; // Increased from 380 to 480 for better readability
     const popupHeight = Math.min(500, window.innerHeight * 0.8); // Responsive height
-    const margin = 10;
+    const margin = 20; // Increased margin for better visibility
 
-    let left = anchor.x + margin;
-    let top = anchor.y + margin;
+    // Position popup in the right bottom corner but higher up
+    let left = window.innerWidth - popupWidth - margin;
+    let top = window.innerHeight - popupHeight - margin - 200; // Move 200px higher to show footer
 
-    // Adjust if popup would go off the right edge
-    if (left + popupWidth > window.innerWidth - margin) {
-      left = anchor.x - popupWidth - margin;
-    }
-
-    // Adjust if popup would go off the bottom edge
-    if (top + popupHeight > window.innerHeight - margin) {
-      top = window.innerHeight - popupHeight - margin; // Always show full popup
-    }
-
-    // Ensure popup doesn't go off the left or top edges
+    // Ensure popup doesn't go off the left or top edges (for very small screens)
     left = Math.max(margin, left);
     top = Math.max(margin, top);
 
     return { left, top };
   };
 
-  const popupPosition = calculatePopupPosition(dragPosition);
+  const popupPosition = calculatePopupPosition();
   const handleDragPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
