@@ -4,7 +4,6 @@ import { comments, users, diagrams } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
 
 const createCommentSchema = z.object({
   content: z.string().min(1, "Comment content is required"),
@@ -15,7 +14,7 @@ const createCommentSchema = z.object({
 });
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -52,7 +51,7 @@ export async function GET(
     }));
 
     return NextResponse.json({ items: serializedComments });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch comments" },
       { status: 500 }

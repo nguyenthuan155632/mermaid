@@ -685,7 +685,6 @@ export default function CommentPanel({
   selectedCommentId,
   isOpen,
   onClose,
-  onSelectComment,
   onEditComment,
   onDeleteComment,
   onToggleResolved,

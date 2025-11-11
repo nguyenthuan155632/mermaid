@@ -3,8 +3,6 @@
 import { useState } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   IconButton,
   Chip,
@@ -12,7 +10,6 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText,
   Button,
 } from "@mui/material";
 import {
@@ -39,7 +36,6 @@ export default function CommentThread({
   anonymousMode = false,
 }: CommentThreadProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [isReplying, setIsReplying] = useState(false);
   const isAuthor = currentUserId === comment.user?.id;
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {

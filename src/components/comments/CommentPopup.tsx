@@ -160,7 +160,6 @@ const ThreadCommentRenderer: React.FC<{
   onCreateComment,
   onSetEditingCommentId,
   onSetReplyingToCommentId,
-  diagramId,
   loading,
   refreshComments,
   isThreadResolved = false,
@@ -760,7 +759,7 @@ export default function CommentPopup({
       setDragPosition(position);
       dragOriginRef.current = position;
     }
-  }, [position.x, position.y, isDragging]);
+  }, [position.x, position.y, isDragging, position]);
 
   useEffect(() => {
     if (!isDragging) {

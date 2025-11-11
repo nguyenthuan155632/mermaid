@@ -31,7 +31,6 @@ import {
   GetApp,
   Share,
   AutoFixHigh,
-  Menu as MenuIcon,
   LibraryBooks,
   Image as ImageIcon,
   Apps,
@@ -696,11 +695,6 @@ function EditorContent() {
             px: { xs: 1, md: 2 }
           }}
         >
-          {!isMobile && (
-            <IconButton edge="start" onClick={() => setLeftDrawerOpen(!leftDrawerOpen)} sx={{ mr: 2 }}>
-              <MenuIcon />
-            </IconButton>
-          )}
           <Box sx={{
             display: "flex",
             alignItems: "center",

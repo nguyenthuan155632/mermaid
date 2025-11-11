@@ -185,7 +185,7 @@ export default function CommentIndicator({
     }
   };
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleClick = () => {
     // Default behavior - open popup instead of sidebar
     if (clickSuppressedRef.current) {
       return;

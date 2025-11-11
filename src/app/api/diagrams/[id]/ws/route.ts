@@ -1,6 +1,4 @@
-import { NextRequest } from "next/server";
 import { WebSocketServer, WebSocket } from "ws";
-import { auth } from "@/auth";
 import { db } from "@/db";
 import { diagrams } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -24,12 +22,7 @@ interface UserInfo {
 const diagramRooms = new Map<string, Set<WebSocket>>();
 const userSockets = new Map<WebSocket, UserInfo>();
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id: diagramId } = await params;
-
+export async function GET() {
   // This is a hack to upgrade HTTP to WebSocket
   // Next.js doesn't have native WebSocket support in API routes
   // We'll use a different approach

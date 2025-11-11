@@ -113,12 +113,12 @@ export function useComments({
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-        } catch (parseError) {
+        } catch {
           // If response is not JSON, try to get text or use status text
           try {
             const text = await response.text();
             errorMessage = text || response.statusText || errorMessage;
-          } catch (textError) {
+          } catch {
             errorMessage = response.statusText || errorMessage;
           }
         }
@@ -167,12 +167,12 @@ export function useComments({
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-        } catch (parseError) {
+        } catch {
           // If response is not JSON, try to get text or use status text
           try {
             const text = await response.text();
             errorMessage = text || response.statusText || errorMessage;
-          } catch (textError) {
+          } catch {
             errorMessage = response.statusText || errorMessage;
           }
         }

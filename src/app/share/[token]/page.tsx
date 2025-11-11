@@ -322,7 +322,7 @@ export default function SharePage() {
       <Box sx={{ flex: 1, position: "relative", bgcolor: "background.default" }}>
         {/* User Presence Indicator - positioned below zoom toolbar */}
         {isConnected && connectedUsers.size > 0 && (
-          <Box sx={{ position: "absolute", top: 90, right: 10, zIndex: 1000 }}>
+          <Box sx={{ position: "absolute", top: { xs: 70, md: 90 }, right: { xs: 15, md: 40 }, zIndex: 1000 }}>
             <UserPresence
               users={connectedUsers}
               currentUserId={session?.user?.id}

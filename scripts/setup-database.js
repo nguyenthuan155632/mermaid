@@ -44,7 +44,7 @@ async function setupDatabase() {
       }
     }
 
-  } catch (error) {
+  } catch {
     process.exit(1);
   }
 }
