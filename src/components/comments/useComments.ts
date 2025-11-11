@@ -179,11 +179,16 @@ export function useComments({
         throw new Error(errorMessage);
       }
 
-      setComments(prev => prev.filter(comment => comment.id !== commentId));
+      // Get the deleted comment IDs from response
+      const responseData = await response.json();
+      const deletedCommentIds = responseData.deletedCommentIds || [commentId];
 
-      // Broadcast comment deletion via WebSocket
+      // Remove all deleted comments from state
+      setComments(prev => prev.filter(comment => !deletedCommentIds.includes(comment.id)));
+
+      // Broadcast deletion for each deleted comment
       if (onCommentDeleted) {
-        onCommentDeleted(commentId);
+        deletedCommentIds.forEach((id: string) => onCommentDeleted(id));
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";

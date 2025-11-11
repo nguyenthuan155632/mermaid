@@ -41,6 +41,7 @@ interface MermaidRendererProps {
   onToggleCommentMode?: () => void;
   diagramId?: string;
   onCreateComment?: (data: { content: string; positionX: number; positionY: number }) => Promise<void>;
+  onDeleteComment?: (commentId: string) => void;
   currentUserId?: string;
   anonymousMode?: boolean;
 }
@@ -62,6 +63,7 @@ export default function MermaidRenderer({
   onToggleCommentMode,
   diagramId,
   onCreateComment,
+  onDeleteComment,
   currentUserId,
   anonymousMode = false,
 }: MermaidRendererProps) {
@@ -844,6 +846,19 @@ export default function MermaidRenderer({
     openPopupForComment(commentId);
   };
 
+  // Handle comment deletion
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await hookDeleteComment(commentId);
+      // Close popup if the deleted comment was selected
+      if (popupComment?.comment.id === commentId) {
+        setPopupComment(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+    }
+  };
+
   // Close popup
   const handleClosePopup = () => {
     setPopupComment(null);
@@ -998,6 +1013,7 @@ export default function MermaidRenderer({
           isPinching={isPinching}
           isPanning={isPanning}
           onCreateComment={actualCreateComment || (async () => { })}
+          onDeleteComment={onDeleteComment || handleDeleteComment}
           onPopupClick={handlePopupClick}
           onUpdateCommentPosition={handleIndicatorDragEnd}
           currentUserId={currentUserId}

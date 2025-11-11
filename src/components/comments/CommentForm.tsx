@@ -133,6 +133,7 @@ export default function CommentForm({
         width: "100%", // Use full width of container
         maxWidth: "none", // Remove max width constraint
         boxSizing: "border-box", // Ensure padding doesn't overflow
+        bgcolor: "#fffcf4",
       }}
     >
       <form onSubmit={handleSubmit}>

@@ -129,6 +129,25 @@ export async function PUT(
   }
 }
 
+// Helper function to recursively find all child comment IDs
+async function getAllChildCommentIds(parentId: string): Promise<string[]> {
+  const childComments = await db
+    .select({ id: comments.id })
+    .from(comments)
+    .where(eq(comments.parentId, parentId));
+
+  const childIds: string[] = [];
+
+  for (const child of childComments) {
+    childIds.push(child.id);
+    // Recursively get children of children
+    const grandChildIds = await getAllChildCommentIds(child.id);
+    childIds.push(...grandChildIds);
+  }
+
+  return childIds;
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; commentId: string }> }
@@ -156,11 +175,24 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Delete the comment
-    await db.delete(comments).where(eq(comments.id, commentId));
+    // Get all child comment IDs recursively
+    const childCommentIds = await getAllChildCommentIds(commentId);
 
-    return NextResponse.json({ success: true });
-  } catch {
+    // Delete all child comments first (in reverse order to handle nested replies)
+    const allCommentIdsToDelete = [...childCommentIds, commentId];
+
+    // Delete comments in batches or individually
+    for (const id of allCommentIdsToDelete) {
+      await db.delete(comments).where(eq(comments.id, id));
+    }
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: allCommentIdsToDelete.length,
+      deletedCommentIds: allCommentIdsToDelete
+    });
+  } catch (error) {
+    console.error("Delete comment error:", error);
     return NextResponse.json(
       { error: "Failed to delete comment" },
       { status: 500 }

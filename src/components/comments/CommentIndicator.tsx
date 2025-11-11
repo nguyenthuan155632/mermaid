@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Badge, Tooltip, IconButton, Menu, MenuItem } from "@mui/material";
-import { Comment as CommentIcon, CheckCircle, MenuOpen } from "@mui/icons-material";
+import { Comment as CommentIcon, CheckCircle, MenuOpen, Delete } from "@mui/icons-material";
 import { CommentIndicatorProps } from "./types";
 import { useState, useRef } from "react";
 
@@ -19,6 +19,8 @@ export default function CommentIndicator({
   onDragEnd,
   getContainerRect,
   anonymousMode = false,
+  currentUserId,
+  onDelete,
 }: CommentIndicatorProps & { onSidebarClick?: () => void; onPopupClick?: () => void }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isContextMenuOpen = Boolean(anchorEl);
@@ -191,6 +193,13 @@ export default function CommentIndicator({
     }
   };
 
+  const handleDeleteAction = () => {
+    handleContextMenuClose();
+    if (onDelete) {
+      onDelete();
+    }
+  };
+
   const handleClick = () => {
     // Default behavior - open popup instead of sidebar
     if (clickSuppressedRef.current) {
@@ -335,6 +344,19 @@ export default function CommentIndicator({
           <MenuOpen fontSize="small" sx={{ mr: 1, color: '#5f6368' }} />
           Open in Sidebar
         </MenuItem>
+        {onDelete && currentUserId && comment.user.id === currentUserId && (
+          <MenuItem onClick={handleDeleteAction} sx={{
+            fontSize: '13px',
+            color: '#d32f2f',
+            py: 0.5,
+            '&:hover': {
+              bgcolor: '#ffebee',
+            },
+          }}>
+            <Delete fontSize="small" sx={{ mr: 1, color: '#d32f2f' }} />
+            Delete Comment
+          </MenuItem>
+        )}
       </Menu>
     </Box>
   );

@@ -17,14 +17,12 @@ export default function CommentOverlay({
   isPanning = false,
   isPinching = false,
   onCreateComment,
+  onDeleteComment,
   onPopupClick,
   onUpdateCommentPosition,
   currentUserId,
   anonymousMode,
-}: CommentOverlayProps & {
-  currentUserId?: string;
-  anonymousMode?: boolean;
-}) {
+}: CommentOverlayProps) {
   const [pendingCommentPosition, setPendingCommentPosition] = useState<{ x: number; y: number } | null>(null);
   const [isAddingComment, setIsAddingComment] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,6 +116,7 @@ export default function CommentOverlay({
             onClick={() => onCommentClick?.(thread.id)}
             onSidebarClick={() => handleSidebarClick(thread.id)}
             onPopupClick={() => handlePopupClick(thread.id)}
+            onDelete={onDeleteComment ? () => onDeleteComment(thread.id) : undefined}
             zoom={zoom}
             pan={pan}
             isPanning={isPanning}
@@ -128,6 +127,7 @@ export default function CommentOverlay({
                 await onUpdateCommentPosition(thread.id, position);
               }
             }}
+            currentUserId={currentUserId}
             anonymousMode={anonymousMode}
           />
         </Box>

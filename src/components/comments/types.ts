@@ -50,6 +50,8 @@ export interface CommentIndicatorProps {
   onDragEnd?: (position: CommentPosition) => void;
   getContainerRect?: () => DOMRect | null;
   anonymousMode?: boolean;
+  currentUserId?: string;
+  onDelete?: () => void;
 }
 
 export interface CommentFormProps {
@@ -104,8 +106,10 @@ export interface CommentOverlayProps {
   isPanning?: boolean;
   isPinching?: boolean;
   onCreateComment?: (data: { content: string; positionX: number; positionY: number; isAnonymous?: boolean }) => Promise<void>;
+  onDeleteComment?: (commentId: string) => void;
   onPopupClick?: (commentId: string) => void;
   onUpdateCommentPosition?: (commentId: string, position: CommentPosition) => Promise<void>;
+  currentUserId?: string;
   anonymousMode?: boolean;
 }
 
