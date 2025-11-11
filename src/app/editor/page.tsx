@@ -56,7 +56,7 @@ import { exportToPNG, exportToSVG } from "@/lib/export";
 import { DiagramSnapshot } from "@/types";
 import { useComments } from "@/components/comments/useComments";
 import { useSession } from "next-auth/react";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebSocket, type CommentEvent } from "@/hooks/useWebSocket";
 import { UserPresence } from "@/components/realtime/UserPresence";
 import { LiveCursors } from "@/components/realtime/LiveCursors";
 import { getAnonymousSessionId } from "@/lib/anonymousSession";
@@ -174,9 +174,23 @@ function EditorContent() {
     sendCommentDeleted({ commentId });
   }, [sendCommentDeleted]);
 
+  const handleCommentDeletedEvent = useCallback((event: CommentEvent) => {
+    if (!event?.commentId) {
+      return;
+    }
+    handleCommentDeleted(event.commentId);
+  }, [handleCommentDeleted]);
+
   const handleCommentResolved = useCallback((commentId: string, isResolved: boolean) => {
     sendCommentResolved({ commentId, isResolved });
   }, [sendCommentResolved]);
+
+  const handleCommentResolvedEvent = useCallback((event: CommentEvent) => {
+    if (!event?.commentId) {
+      return;
+    }
+    handleCommentResolved(event.commentId, Boolean(event.isResolved));
+  }, [handleCommentResolved]);
 
   // Comment hooks with WebSocket broadcast
   const {
@@ -1244,8 +1258,8 @@ function EditorContent() {
             sendCommentPosition={sendCommentPosition}
             sendCommentCreated={handleCommentCreated}
             sendCommentUpdated={handleCommentUpdated}
-            sendCommentDeleted={handleCommentDeleted}
-            sendCommentResolved={handleCommentResolved}
+            sendCommentDeleted={handleCommentDeletedEvent}
+            sendCommentResolved={handleCommentResolvedEvent}
           />
         </Box>
       </Box>

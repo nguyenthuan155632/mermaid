@@ -27,7 +27,7 @@ import MermaidRenderer from "@/components/MermaidRenderer";
 import CommentPanel from "@/components/comments/CommentPanel";
 import { useComments } from "@/components/comments/useComments";
 import { exportToPNG, exportToSVG } from "@/lib/export";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebSocket, type CommentEvent } from "@/hooks/useWebSocket";
 import { UserPresence } from "@/components/realtime/UserPresence";
 import { LiveCursors } from "@/components/realtime/LiveCursors";
 import { getAnonymousSessionId } from "@/lib/anonymousSession";
@@ -88,9 +88,23 @@ export default function SharePage() {
     sendCommentDeleted({ commentId });
   }, [sendCommentDeleted]);
 
+  const handleCommentDeletedEvent = useCallback((event: CommentEvent) => {
+    if (!event?.commentId) {
+      return;
+    }
+    handleCommentDeleted(event.commentId);
+  }, [handleCommentDeleted]);
+
   const handleCommentResolved = useCallback((commentId: string, isResolved: boolean) => {
     sendCommentResolved({ commentId, isResolved });
   }, [sendCommentResolved]);
+
+  const handleCommentResolvedEvent = useCallback((event: CommentEvent) => {
+    if (!event?.commentId) {
+      return;
+    }
+    handleCommentResolved(event.commentId, Boolean(event.isResolved));
+  }, [handleCommentResolved]);
 
   // Initialize comments hook with WebSocket broadcast - only when we have a diagram ID
   const {
@@ -373,8 +387,8 @@ export default function SharePage() {
             sendCommentPosition={sendCommentPosition}
             sendCommentCreated={handleCommentCreated}
             sendCommentUpdated={handleCommentUpdated}
-            sendCommentDeleted={handleCommentDeleted}
-            sendCommentResolved={handleCommentResolved}
+            sendCommentDeleted={handleCommentDeletedEvent}
+            sendCommentResolved={handleCommentResolvedEvent}
           />
         </Box>
         {detailsOpen && (
