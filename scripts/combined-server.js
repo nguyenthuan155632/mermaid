@@ -42,12 +42,16 @@ app.prepare().then(() => {
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = parse(request.url || '', true);
 
+    console.log(`[WS] Upgrade request received for: ${pathname}`);
+
     // Only upgrade to WebSocket for /api/diagrams/[id]/ws paths
     if (pathname && pathname.match(/^\/api\/diagrams\/[^\/]+\/ws$/)) {
+      console.log(`[WS] Upgrading to WebSocket for: ${pathname}`);
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
     } else {
+      console.log(`[WS] Rejecting non-WebSocket path: ${pathname}`);
       // Not a WebSocket path, destroy the socket
       socket.destroy();
     }
