@@ -845,18 +845,22 @@ export default function CommentPopup({
   // Calculate popup position to stay within viewport
   const calculatePopupPosition = () => {
     const popupWidth = 480; // Increased from 380 to 480 for better readability
-    const popupHeight = Math.min(500, window.innerHeight * 0.8); // Responsive height
-    const margin = 20; // Increased margin for better visibility
+    const margin = 20; // Margin from viewport edges
+    const footerHeight = 80; // Reserved space for footer at bottom
+    const headerHeight = 60; // Reserved space for header at top
 
-    // Position popup in the right bottom corner but higher up
+    // Calculate available height for popup
+    const availableHeight = window.innerHeight - headerHeight - footerHeight - (margin * 2);
+    const maxPopupHeight = Math.min(600, availableHeight);
+
+    // Position popup in the right side, vertically centered in available space
     let left = window.innerWidth - popupWidth - margin;
-    let top = window.innerHeight - popupHeight - margin - 200; // Move 200px higher to show footer
+    const top = headerHeight + margin;
 
-    // Ensure popup doesn't go off the left or top edges (for very small screens)
+    // Ensure popup doesn't go off the left edge (for very small screens)
     left = Math.max(margin, left);
-    top = Math.max(margin, top);
 
-    return { left, top };
+    return { left, top, maxHeight: maxPopupHeight };
   };
 
   const popupPosition = calculatePopupPosition();
@@ -912,7 +916,7 @@ export default function CommentPopup({
           top: popupPosition.top,
           width: 480, // Increased from 380 to 480 for better readability
           maxWidth: '92vw',
-          maxHeight: '75vh',
+          maxHeight: `${popupPosition.maxHeight}px`,
           borderRadius: '15px',
           backgroundColor: notionPalette.surface,
           border: `1px solid ${notionPalette.border}`,
@@ -1003,7 +1007,6 @@ export default function CommentPopup({
         <Box
           sx={{
             flex: 1,
-            maxHeight: '65vh', // Further increased height for better scrolling
             overflowY: 'auto',
             pr: 0.75,
             pl: 0,

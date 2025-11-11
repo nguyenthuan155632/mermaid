@@ -28,6 +28,7 @@ export default function CommentIndicator({
   const clickSuppressedRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
   const pointerCaptureTargetRef = useRef<HTMLElement | null>(null);
+  const lastCommittedPositionRef = useRef({ x: comment.positionX, y: comment.positionY });
 
   const toDiagramCoordinates = (clientX: number, clientY: number) => {
     const rect = getContainerRect?.();
@@ -134,9 +135,14 @@ export default function CommentIndicator({
         return;
       }
 
+      // Keep the drag position and update the last committed position
       setDragPosition(coords);
+      lastCommittedPositionRef.current = coords;
       try {
         await onDragEnd?.(coords);
+        // Wait a bit for the update to propagate before clearing drag position
+        // This prevents the flicker where it jumps back to old position
+        await new Promise(resolve => setTimeout(resolve, 150));
       } catch (error) {
         console.error("Failed to finish drag:", error);
       } finally {
@@ -197,7 +203,23 @@ export default function CommentIndicator({
     }
   };
 
-  const effectivePosition = dragPosition ?? { x: comment.positionX, y: comment.positionY };
+  // Use drag position if dragging, otherwise use last committed position if it's close to current prop
+  // This prevents flicker when props update slightly lags behind drag
+  const effectivePosition = dragPosition ?? (() => {
+    const propPosition = { x: comment.positionX, y: comment.positionY };
+    const lastCommitted = lastCommittedPositionRef.current;
+
+    // If the prop position is very close to last committed (within 1 unit), 
+    // it means the update has propagated successfully - update our ref
+    const deltaX = Math.abs(propPosition.x - lastCommitted.x);
+    const deltaY = Math.abs(propPosition.y - lastCommitted.y);
+
+    if (deltaX < 1 && deltaY < 1) {
+      lastCommittedPositionRef.current = propPosition;
+    }
+
+    return propPosition;
+  })();
 
   return (
     <Box

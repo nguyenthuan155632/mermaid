@@ -325,13 +325,19 @@ export default function MermaidRenderer({
     const mergePositions = (thread: ThreadedComment): ThreadedComment => {
       const wsPosition = commentPositions[thread.id];
       if (wsPosition) {
-        // Always use WebSocket position if available (it's the latest from other users)
-        return {
-          ...thread,
-          positionX: wsPosition.x,
-          positionY: wsPosition.y,
-          replies: thread.replies.map(mergePositions),
-        };
+        // Only update if the position has actually changed (prevent unnecessary re-renders)
+        const hasPositionChanged =
+          Math.abs(thread.positionX - wsPosition.x) > 0.1 ||
+          Math.abs(thread.positionY - wsPosition.y) > 0.1;
+
+        if (hasPositionChanged) {
+          return {
+            ...thread,
+            positionX: wsPosition.x,
+            positionY: wsPosition.y,
+            replies: thread.replies.map(mergePositions),
+          };
+        }
       }
       return {
         ...thread,
