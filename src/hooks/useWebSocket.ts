@@ -206,6 +206,23 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
     };
   }, [getEffectiveUserId]);
 
+  const getWebSocketUrl = useCallback((channelId: string): string => {
+    // If explicit WebSocket URL is provided via environment variable, use it
+    if (process.env.NEXT_PUBLIC_WS_URL) {
+      return `${process.env.NEXT_PUBLIC_WS_URL}/api/diagrams/${channelId}/ws`;
+    }
+
+    // In production, use the same host with wss:// for HTTPS or ws:// for HTTP
+    if (process.env.NODE_ENV === 'production') {
+      const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = typeof window !== 'undefined' ? window.location.host : 'localhost:4026';
+      return `${protocol}//${host}/api/diagrams/${channelId}/ws`;
+    }
+
+    // Local development - use standalone WebSocket server
+    return `ws://localhost:4026/api/diagrams/${channelId}/ws`;
+  }, []);
+
   const connect = useCallback(() => {
     if (!channelId) return;
 
@@ -214,7 +231,8 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
     }
 
     try {
-      const wsUrl = `ws://localhost:4026/api/diagrams/${channelId}/ws`;
+      const wsUrl = getWebSocketUrl(channelId);
+      console.log(`[WS] Connecting to: ${wsUrl}`);
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
@@ -334,7 +352,8 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
             reconnectAttemptsRef.current++;
             // Use a direct connection attempt here to avoid circular dependency
             if (channelId) {
-              const wsUrl = `ws://localhost:4026/api/diagrams/${channelId}/ws`;
+              const wsUrl = getWebSocketUrl(channelId);
+              console.log(`[WS] Reconnecting to: ${wsUrl}`);
               const newWs = new WebSocket(wsUrl);
               wsRef.current = newWs;
 
@@ -376,7 +395,7 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
     } catch (error) {
       console.error("Failed to create WebSocket connection:", error);
     }
-  }, [channelId, getEffectiveUserInfo]);
+  }, [channelId, getEffectiveUserInfo, getWebSocketUrl]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

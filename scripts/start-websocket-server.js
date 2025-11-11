@@ -261,7 +261,11 @@ function broadcastToRoom(diagramId, message, excludeWs = null) {
   });
 }
 
-server.listen(4026, () => {
+const PORT = process.env.PORT || 4026;
+const HOST = process.env.HOST || '0.0.0.0';
+
+server.listen(PORT, HOST, () => {
+  console.log(`WebSocket server listening on ${HOST}:${PORT}`);
 });
 
 // Graceful shutdown
