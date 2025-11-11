@@ -341,6 +341,7 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
       };
 
       wsRef.current.onclose = (event) => {
+        console.log(`[WS] Connection closed - code: ${event.code}, reason: ${event.reason}, wasClean: ${event.wasClean}`);
         setIsConnected(false);
         // Don't clear state on disconnect - keep for display
         // State persists in singleton manager

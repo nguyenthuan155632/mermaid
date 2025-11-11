@@ -58,6 +58,22 @@ app.prepare().then(() => {
     let userId = null;
     let diagramId = null;
     let userInfo = null;
+    let isAlive = true;
+
+    // Set up ping/pong to keep connection alive
+    ws.on('pong', () => {
+      isAlive = true;
+    });
+
+    const heartbeatInterval = setInterval(() => {
+      if (!isAlive) {
+        console.log(`[WS] Connection appears dead, terminating`);
+        clearInterval(heartbeatInterval);
+        return ws.terminate();
+      }
+      isAlive = false;
+      ws.ping();
+    }, 30000); // Ping every 30 seconds
 
     ws.on('message', (data) => {
       try {
@@ -214,6 +230,7 @@ app.prepare().then(() => {
 
     ws.on('close', (code, reason) => {
       console.log(`[WS] Connection closed - code: ${code}, reason: ${reason}, userId: ${userId}, diagramId: ${diagramId}`);
+      clearInterval(heartbeatInterval);
       if (userId && diagramId) {
         // Remove user from room only if this is the current connection
         if (rooms.has(diagramId)) {
