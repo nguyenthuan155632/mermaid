@@ -196,10 +196,7 @@ export default function SharePage() {
         position="static"
         color="default"
         elevation={0}
-        sx={{
-          bgcolor: "white",
-          borderBottom: "1px solid #e5e7eb"
-        }}
+        sx={{ bgcolor: "white", borderBottom: "1px solid #e5e7eb", zIndex: 1000 }}
       >
         <Toolbar
           sx={{
@@ -322,7 +319,7 @@ export default function SharePage() {
       <Box sx={{ flex: 1, position: "relative", bgcolor: "background.default" }}>
         {/* User Presence Indicator - positioned below zoom toolbar */}
         {isConnected && connectedUsers.size > 0 && (
-          <Box sx={{ position: "absolute", top: { xs: 70, md: 90 }, right: { xs: 15, md: 40 }, zIndex: 1000 }}>
+          <Box sx={{ position: "absolute", top: { xs: 60, md: 60 }, right: 8, zIndex: 1000 }}>
             <UserPresence
               users={connectedUsers}
               currentUserId={session?.user?.id}
@@ -347,8 +344,6 @@ export default function SharePage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            px: { xs: 1, md: 4 },
-            py: { xs: 2, md: 4 },
           }}
         >
           <MermaidRenderer

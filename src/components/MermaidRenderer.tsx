@@ -195,24 +195,16 @@ export default function MermaidRenderer({
     const nextPositionX = (clientPosition.x - containerCenterX - pan.x) / zoom;
     const nextPositionY = (clientPosition.y - containerCenterY - pan.y) / zoom;
 
-    const commentToUpdate = actualComments.find(
-      (c) => c.id === popupComment.comment.id
-    );
-
-    if (!commentToUpdate) {
-      return;
-    }
-
     try {
+      // Only send position update (allows all users to drag comments for collaboration)
       await hookUpdateComment(popupComment.comment.id, {
-        content: commentToUpdate.content,
         positionX: nextPositionX,
         positionY: nextPositionY,
       });
     } catch (err) {
       console.error("Failed to move comment:", err);
     }
-  }, [diagramId, popupComment, pan.x, pan.y, zoom, actualComments, hookUpdateComment]);
+  }, [diagramId, popupComment, pan.x, pan.y, zoom, hookUpdateComment]);
 
   const handleIndicatorDragEnd = useCallback(async (commentId: string, position: { x: number; y: number }) => {
     if (!diagramId) {
