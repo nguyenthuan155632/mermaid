@@ -59,10 +59,19 @@ app.prepare().then(() => {
 
   wss.on('connection', (ws, request) => {
     console.log(`[WS] New WebSocket connection from ${request.socket.remoteAddress}, URL: ${request.url}`);
+    console.log(`[WS] WebSocket readyState: ${ws.readyState}`);
     let userId = null;
     let diagramId = null;
     let userInfo = null;
     let isAlive = true;
+
+    // Send a ping immediately to test connection
+    try {
+      ws.ping();
+      console.log(`[WS] Sent initial ping to client`);
+    } catch (error) {
+      console.error(`[WS] Failed to send initial ping:`, error);
+    }
 
     // Set up ping/pong to keep connection alive
     ws.on('pong', () => {
