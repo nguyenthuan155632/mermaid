@@ -126,35 +126,20 @@ export default function CommentForm({
   return (
     <Box
       sx={{
-        p: 2,
-        bgcolor: "#ffffff",
-        border: "1px solid #e9ecef",
-        borderRadius: "8px",
+        p: 1.5,
+        pt: 0,
+        borderRadius: "6px",
         boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
         width: "100%", // Use full width of container
         maxWidth: "none", // Remove max width constraint
         boxSizing: "border-box", // Ensure padding doesn't overflow
       }}
     >
-      <Typography variant="subtitle2" sx={{
-        mb: 2,
-        fontWeight: 600,
-        color: "#202124",
-        fontSize: "14px",
-      }}>
-        {isEditing ? "Edit comment" : "Add comment"}
-      </Typography>
-
       <form onSubmit={handleSubmit}>
         {/* Formatting Toolbar */}
         <Stack
           direction="row"
-          spacing={0.5}
-          sx={{
-            mb: 1,
-            pb: 1,
-            borderBottom: "1px solid #e9ecef",
-          }}
+          spacing={0.25}
         >
           <Tooltip title="Bold (Ctrl+B)" arrow>
             <IconButton
@@ -200,8 +185,6 @@ export default function CommentForm({
               <FormatStrikethrough fontSize="small" />
             </IconButton>
           </Tooltip>
-
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
           <Tooltip title="Text color" arrow>
             <IconButton
@@ -266,10 +249,10 @@ export default function CommentForm({
           onBlur={() => setIsFocused(false)}
           suppressContentEditableWarning
           sx={{
-            minHeight: "80px",
-            maxHeight: "300px",
+            minHeight: "120px",
+            maxHeight: "400px",
             overflowY: "auto",
-            p: 1.5,
+            p: 1,
             fontSize: "14px",
             lineHeight: "20px",
             color: "#202124",
@@ -278,7 +261,7 @@ export default function CommentForm({
             borderWidth: isFocused ? "2px" : "1px",
             borderRadius: "4px",
             outline: "none",
-            bgcolor: loading ? "#f8f9fa" : "#ffffff",
+            bgcolor: loading ? "#f5f7fa" : "#ffffff",
             cursor: loading ? "not-allowed" : "text",
             transition: "all 0.2s",
             "&:hover": {
@@ -301,21 +284,21 @@ export default function CommentForm({
           }}
         />
 
-        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+        <Stack direction="row" spacing={0.75} sx={{ mt: 1.5 }}>
           <Button
             type="submit"
             variant="contained"
             size="small"
             disabled={!content.trim() || loading}
-            startIcon={loading ? <CircularProgress size={16} /> : <SaveIcon />}
+            startIcon={loading ? <CircularProgress size={14} /> : <SaveIcon />}
             sx={{
               flex: 1,
               bgcolor: "#1a73e8",
               color: "#ffffff",
-              fontSize: "14px",
+              fontSize: "13px",
               fontWeight: 500,
               textTransform: "none",
-              py: 1,
+              py: 0.75,
               "&:hover": {
                 bgcolor: "#1765cc",
               },
@@ -337,10 +320,10 @@ export default function CommentForm({
               disabled={loading}
               startIcon={<CloseIcon />}
               sx={{
-                fontSize: "14px",
+                fontSize: "13px",
                 fontWeight: 500,
                 textTransform: "none",
-                py: 1,
+                py: 0.75,
                 color: "#5f6368",
                 borderColor: "#dadce0",
                 "&:hover": {
@@ -359,10 +342,10 @@ export default function CommentForm({
         </Stack>
 
         <Typography variant="caption" sx={{
-          mt: 1,
+          mt: 0.75,
           display: "block",
           color: "#9aa0a6",
-          fontSize: "12px",
+          fontSize: "11px",
         }}>
           Press Ctrl+Enter to save{showCancelButton && ", Esc to cancel"}
         </Typography>
