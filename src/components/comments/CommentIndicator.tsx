@@ -250,10 +250,23 @@ export default function CommentIndicator({
             <Box sx={{ fontWeight: "bold", mb: 0.5 }}>
               {anonymousMode ? "Anonymous" : (comment.user?.email || "Unknown")}
             </Box>
-            <Box sx={{ maxWidth: 200 }}>
-              {comment.content.slice(0, 100)}
-              {comment.content.length > 100 && "..."}
-            </Box>
+            <Box
+              sx={{
+                maxWidth: 200,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                "& *": {
+                  margin: 0,
+                  padding: 0,
+                }
+              }}
+              dangerouslySetInnerHTML={{
+                __html: comment.content
+              }}
+            />
             <Box sx={{ fontSize: "0.75rem", mt: 0.5, opacity: 0.7 }}>
               {new Date(comment.createdAt).toLocaleDateString()}
             </Box>

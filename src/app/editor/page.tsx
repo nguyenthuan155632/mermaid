@@ -948,12 +948,28 @@ function EditorContent() {
               </Box>
               <Divider />
               <Box sx={{ p: 2 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    mb: 1,
+                    cursor: "pointer",
+                    userSelect: "none"
+                  }}
+                  onClick={() => toggleSection("samples")}
+                >
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     Sample Diagrams
                   </Typography>
-                  <IconButton size="small" onClick={() => toggleSection("samples")}
-                    aria-label="Toggle sample diagrams section">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSection("samples");
+                    }}
+                    aria-label="Toggle sample diagrams section"
+                  >
                     {sidebarSections.samples ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                   </IconButton>
                 </Stack>
@@ -970,11 +986,28 @@ function EditorContent() {
               </Box>
               <Divider />
               <Box sx={{ p: 2 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    mb: 1,
+                    cursor: "pointer",
+                    userSelect: "none"
+                  }}
+                  onClick={() => toggleSection("actions")}
+                >
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     Actions
                   </Typography>
-                  <IconButton size="small" onClick={() => toggleSection("actions")} aria-label="Toggle actions section">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSection("actions");
+                    }}
+                    aria-label="Toggle actions section"
+                  >
                     {sidebarSections.actions ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                   </IconButton>
                 </Stack>
@@ -1036,14 +1069,32 @@ function EditorContent() {
               </Box>
               <Divider />
               <Box sx={{ p: 2 }}>
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{
+                    mb: 1,
+                    cursor: "pointer",
+                    userSelect: "none"
+                  }}
+                  onClick={() => toggleSection("history")}
+                >
                   <Stack direction="row" spacing={1} alignItems="center">
                     <History fontSize="small" color="action" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                       Version History
                     </Typography>
                   </Stack>
-                  <IconButton size="small" onClick={() => toggleSection("history")} aria-label="Toggle version history section">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSection("history");
+                    }}
+                    aria-label="Toggle version history section"
+                  >
                     {sidebarSections.history ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                   </IconButton>
                 </Stack>

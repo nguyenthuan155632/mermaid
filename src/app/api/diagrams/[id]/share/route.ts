@@ -30,7 +30,11 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const shareToken = uuidv4();
+    // Reuse existing shareToken if available, otherwise create a new one
+    let shareToken = existingDiagram.shareToken;
+    if (!shareToken) {
+      shareToken = uuidv4();
+    }
 
     const [updatedDiagram] = await db
       .update(diagrams)
