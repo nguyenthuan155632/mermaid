@@ -16,7 +16,7 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   },
 });
 
-export const users = pgTable("users", {
+export const users = pgTable("mermaid_users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password"),
@@ -27,7 +27,7 @@ export const users = pgTable("users", {
 });
 
 export const diagrams = pgTable(
-  "diagrams",
+  "mermaid_diagrams",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id")
@@ -59,7 +59,7 @@ export const diagrams = pgTable(
 );
 
 export const diagramSnapshots = pgTable(
-  "diagram_snapshots",
+  "mermaid_diagram_snapshots",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     diagramId: uuid("diagram_id")
@@ -77,7 +77,7 @@ export const diagramSnapshots = pgTable(
 );
 
 export const sampleDiagrams = pgTable(
-  "sample_diagrams",
+  "mermaid_sample_diagrams",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
@@ -99,7 +99,8 @@ export type Diagram = typeof diagrams.$inferSelect;
 export type NewDiagram = typeof diagrams.$inferInsert;
 export type DiagramSnapshot = typeof diagramSnapshots.$inferSelect;
 export type NewDiagramSnapshot = typeof diagramSnapshots.$inferInsert;
-export const comments = pgTable("comments", {
+
+export const comments = pgTable("mermaid_comments", {
   id: uuid("id").defaultRandom().primaryKey(),
   diagramId: uuid("diagram_id")
     .notNull()
@@ -126,7 +127,7 @@ export type NewSampleDiagram = typeof sampleDiagrams.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
 
-export const diagramSessions = pgTable("diagram_sessions", {
+export const diagramSessions = pgTable("mermaid_diagram_sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
   diagramId: uuid("diagram_id")
     .notNull()
