@@ -4,10 +4,10 @@ let genAI: GoogleGenerativeAI | null = null;
 
 function getGenAI(): GoogleGenerativeAI {
   if (!genAI) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY environment variable is not set");
+    if (!process.env.GOOGLE_API_KEY) {
+      throw new Error("GOOGLE_API_KEY environment variable is not set");
     }
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
   }
   return genAI;
 }
@@ -16,7 +16,7 @@ export async function fixMermaidDiagram(
   code: string,
   errorMessage: string
 ): Promise<{ fixedCode: string; explanation: string }> {
-  const model = getGenAI().getGenerativeModel({ model: "gemini-pro" });
+  const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
   const prompt = `You are a Mermaid diagram syntax expert. Fix the following Mermaid diagram code that has an error.
 
@@ -27,14 +27,18 @@ Broken Mermaid code:
 ${code}
 \`\`\`
 
-Please:
-1. Fix the syntax error
-2. Return ONLY the corrected Mermaid code (no markdown, no code blocks, just the raw Mermaid code)
-3. Provide a brief explanation of what was wrong (one sentence)
+IMPORTANT: Return ONLY the final, complete corrected Mermaid code. Do not include:
+- Step-by-step explanations
+- Multiple versions or iterations
+- Markdown formatting or code blocks
+- Process descriptions
+- Any text before or after the code
+
+Return ONLY the raw Mermaid code that is 100% correct and ready to use.
 
 Format your response as JSON:
 {
-  "fixedCode": "the corrected mermaid code here",
+  "fixedCode": "the final corrected mermaid code here",
   "explanation": "brief explanation of the fix"
 }`;
 
@@ -58,7 +62,8 @@ Format your response as JSON:
       fixedCode: text.trim().replace(/```mermaid\n?/g, "").replace(/```\n?/g, "").trim(),
       explanation: "AI fixed the syntax error",
     };
-  } catch {
+  } catch (error) {
+    console.error("Failed to fix diagram with AI:", error);
     throw new Error("Failed to fix diagram with AI");
   }
 }

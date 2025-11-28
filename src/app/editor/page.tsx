@@ -25,6 +25,8 @@ import {
   Collapse,
   Chip,
   CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Save,
@@ -110,6 +112,18 @@ function EditorContent() {
     actions: false,
     history: false,
   });
+  const [notification, setNotification] = useState<{
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+  } | null>(null);
+
+  const showNotification = useCallback((message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setNotification({ message, severity });
+  }, []);
+
+  const hideNotification = useCallback(() => {
+    setNotification(null);
+  }, []);
 
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
@@ -464,7 +478,7 @@ function EditorContent() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert("Please enter a title for your diagram");
+      showNotification("Please enter a title for your diagram", "warning");
       return;
     }
 
@@ -500,12 +514,12 @@ function EditorContent() {
         await fetchSnapshots(nextDiagramId);
       }
       setSaveSuccess(true);
-      alert("Diagram saved successfully!");
+      showNotification("Diagram saved successfully!", "success");
 
       // Reset success state after animation
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch {
-      alert("Failed to save diagram");
+      showNotification("Failed to save diagram", "error");
     } finally {
       setSaving(false);
     }
@@ -532,9 +546,9 @@ function EditorContent() {
       setDiagramId(data.id);
       setShareToken(data.shareToken || null);
       await fetchSnapshots(data.id);
-      alert("Diagram reverted to the selected snapshot");
+      showNotification("Diagram reverted to the selected snapshot", "success");
     } catch {
-      alert("Failed to revert snapshot");
+      showNotification("Failed to revert snapshot", "error");
     } finally {
       setRevertingSnapshotId(null);
     }
@@ -545,7 +559,7 @@ function EditorContent() {
       await exportToPNG(debouncedCode, title || "diagram", pngResolution, pngBackground);
       setPngDialogOpen(false);
     } catch {
-      alert("Failed to export PNG");
+      showNotification("Failed to export PNG", "error");
     }
   };
 
@@ -553,13 +567,13 @@ function EditorContent() {
     try {
       await exportToSVG(debouncedCode, title || "diagram", 'white');
     } catch {
-      alert("Failed to export SVG");
+      showNotification("Failed to export SVG", "error");
     }
   };
 
   const handleShare = async () => {
     if (!activeDiagramId) {
-      alert("Please save the diagram first");
+      showNotification("Please save the diagram first", "warning");
       return;
     }
 
@@ -576,9 +590,9 @@ function EditorContent() {
       setShareToken(data.shareToken || null);
       const shareUrl = `${window.location.origin}/share/${data.shareToken}`;
       await navigator.clipboard.writeText(shareUrl);
-      alert("Share link copied to clipboard!");
+      showNotification("Share link copied to clipboard!", "success");
     } catch {
-      alert("Failed to generate share link");
+      showNotification("Failed to generate share link", "error");
     }
   };
 
@@ -602,9 +616,9 @@ function EditorContent() {
 
       const data = await response.json();
       setCode(data.fixedCode);
-      alert(`Fixed! ${data.explanation}`);
+      showNotification(`Fixed! ${data.explanation}`, "success");
     } catch {
-      alert("Failed to fix diagram with AI");
+      showNotification("Failed to fix diagram with AI", "error");
     } finally {
       setFixing(false);
     }
@@ -1723,6 +1737,25 @@ function EditorContent() {
           diagramTitle={title || "diagram"}
           baseUrl={window.location.origin}
         />
+      )}
+
+      {/* Notification Snackbar */}
+      {notification && (
+        <Snackbar
+          open={true}
+          autoHideDuration={4000}
+          onClose={hideNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert
+            onClose={hideNotification}
+            severity={notification.severity}
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
       )}
     </Box >
   );

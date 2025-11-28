@@ -16,7 +16,9 @@
     "lint": "eslint .",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:setup": "node scripts/setup-database.js"
+    "db:setup": "node scripts/setup-database.js",
+    "db:drop": "node scripts/drop-database.js",
+    "db:reset": "pnpm db:drop && pnpm db:setup && pnpm db:push"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
