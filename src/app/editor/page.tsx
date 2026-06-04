@@ -635,7 +635,7 @@ function EditorContent() {
 
     if (snapshotsLoading) {
       return (
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <CircularProgress size={16} thickness={5} />
           <Typography variant="body2" color="text.secondary">
             Loading history…
@@ -666,7 +666,11 @@ function EditorContent() {
                 bgcolor: isCurrent ? "#f8fafc" : "white",
               }}
             >
-              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", justifyContent: "space-between" }}
+              >
                 <Typography
                   variant="body2"
                   sx={{
@@ -811,7 +815,7 @@ function EditorContent() {
             <Stack
               direction="row"
               spacing={1}
-              alignItems="center"
+              sx={{ alignItems: "center" }}
             >
               <Button
                 variant="text"
@@ -1004,9 +1008,9 @@ function EditorContent() {
               <Box sx={{ p: 2 }}>
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
                   sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     mb: 1,
                     cursor: "pointer",
                     userSelect: "none"
@@ -1042,9 +1046,9 @@ function EditorContent() {
               <Box sx={{ p: 2 }}>
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
                   sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     mb: 1,
                     cursor: "pointer",
                     userSelect: "none"
@@ -1126,16 +1130,16 @@ function EditorContent() {
                 <Stack
                   direction="row"
                   spacing={1}
-                  alignItems="center"
-                  justifyContent="space-between"
                   sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     mb: 1,
                     cursor: "pointer",
                     userSelect: "none"
                   }}
                   onClick={() => toggleSection("history")}
                 >
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                     <History fontSize="small" color="action" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                       Version History
@@ -1291,11 +1295,13 @@ function EditorContent() {
           open={historyDrawerOpen}
           onClose={() => setHistoryDrawerOpen(false)}
           keepMounted
-          PaperProps={{
-            sx: {
-              width: "85vw",
-              maxWidth: 360,
-              bgcolor: "#fafafa",
+          slotProps={{
+            paper: {
+              sx: {
+                width: "85vw",
+                maxWidth: 360,
+                bgcolor: "#fafafa",
+              },
             },
           }}
         >
@@ -1334,12 +1340,14 @@ function EditorContent() {
           open={codeDrawerOpen}
           onClose={() => setCodeDrawerOpen(false)}
           keepMounted
-          PaperProps={{
-            sx: {
-              height: "50vh",
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              bgcolor: "#fafafa",
+          slotProps={{
+            paper: {
+              sx: {
+                height: "50vh",
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+                bgcolor: "#fafafa",
+              },
             },
           }}
           transitionDuration={300}
@@ -1455,9 +1463,11 @@ function EditorContent() {
         onClose={() => setPngDialogOpen(false)}
         maxWidth="lg"
         fullWidth
-        PaperProps={{
-          sx: {
-            height: '80vh',
+        slotProps={{
+          paper: {
+            sx: {
+              height: "80vh",
+            },
           }
         }}
       >
@@ -1501,7 +1511,7 @@ function EditorContent() {
                     control={<Radio />}
                     label={
                       <Box>
-                        <Typography variant="body1" fontWeight={600}>PNG</Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>PNG</Typography>
                         <Typography variant="caption" color="text.secondary">
                           High quality raster image
                         </Typography>
@@ -1520,7 +1530,7 @@ function EditorContent() {
                     control={<Radio disabled />}
                     label={
                       <Box>
-                        <Typography variant="body1" fontWeight={600}>SVG</Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>SVG</Typography>
                         <Typography variant="caption" color="text.secondary">
                           Scalable vector graphics
                         </Typography>
@@ -1552,7 +1562,7 @@ function EditorContent() {
                     control={<Radio />}
                     label={
                       <Box>
-                        <Typography variant="body2" fontWeight={500}>{option.label}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{option.label}</Typography>
                         <Typography variant="caption" color="text.secondary">
                           {option.desc}
                         </Typography>

@@ -37,7 +37,7 @@ export default function HomePage() {
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: "#fafafa" }}>
       <Container maxWidth="lg" sx={{ py: 8, flex: 1 }}>
-        <Grid container spacing={6} alignItems="center">
+        <Grid container spacing={6} sx={{ alignItems: "center" }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
               <Box
@@ -64,7 +64,7 @@ export default function HomePage() {
             <Typography variant="h4" color="text.secondary" gutterBottom sx={{ fontWeight: 500 }}>
               Create beautiful diagrams with ease
             </Typography>
-            <Typography variant="body1" paragraph sx={{ mt: 3, fontSize: "1.1rem", lineHeight: 1.7 }}>
+            <Typography variant="body1" sx={{ mt: 3, mb: 2, fontSize: "1.1rem", lineHeight: 1.7 }}>
               A powerful, user-friendly editor for creating Mermaid diagrams.
               Support for flowcharts, sequence diagrams, class diagrams, and
               more.
@@ -120,4 +120,3 @@ export default function HomePage() {
     </Box>
   );
 }
-

@@ -391,7 +391,7 @@ export default function DiagramsPage() {
               MermaidX
             </Typography>
           </Box>
-          <Stack direction="row" spacing={{ xs: 0.5, md: 1 }} alignItems="center">
+          <Stack direction="row" spacing={{ xs: 0.5, md: 1 }} sx={{ alignItems: "center" }}>
             <IconButton onClick={() => router.push("/")} size="small" title="Home" color="default">
               <Home />
             </IconButton>
@@ -436,7 +436,7 @@ export default function DiagramsPage() {
                 <Stack
                   direction={{ xs: "column", sm: "row" }}
                   spacing={2}
-                  alignItems={{ xs: "stretch", sm: "center" }}
+                  sx={{ alignItems: { xs: "stretch", sm: "center" } }}
                 >
                   <TextField
                     placeholder="Search diagrams"
@@ -447,12 +447,14 @@ export default function DiagramsPage() {
                     }}
                     fullWidth
                     size="small"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      },
                     }}
                     sx={{ maxWidth: { sm: 400 } }}
                   />
@@ -496,7 +498,7 @@ export default function DiagramsPage() {
                 <Stack
                   direction={{ xs: "column", md: "row" }}
                   spacing={2}
-                  alignItems={{ xs: "stretch", md: "center" }}
+                  sx={{ alignItems: { xs: "stretch", md: "center" } }}
                 >
                   <ToggleButtonGroup
                     value={visibility}
@@ -522,7 +524,7 @@ export default function DiagramsPage() {
                       setDateFrom(event.target.value);
                       setPage(1);
                     }}
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                     sx={{ flex: { xs: 1, md: "initial" }, minWidth: { md: 160 } }}
                   />
                   <TextField
@@ -534,7 +536,7 @@ export default function DiagramsPage() {
                       setDateTo(event.target.value);
                       setPage(1);
                     }}
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                     sx={{ flex: { xs: 1, md: "initial" }, minWidth: { md: 160 } }}
                   />
                   <Box sx={{ flexGrow: 1, display: { xs: "none", md: "block" } }} />
@@ -591,7 +593,7 @@ export default function DiagramsPage() {
                     <MermaidRenderer code={diagram.code} disableInteractions initialZoom={0.5} />
                   </Box>
                   <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1 }}>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                       <Typography variant="h6" sx={{ flexGrow: 1 }}>
                         {diagram.title}
                       </Typography>
@@ -604,7 +606,7 @@ export default function DiagramsPage() {
                     <Typography variant="body2" color="text.secondary" sx={{ minHeight: 48 }}>
                       {diagram.description || "No description provided."}
                     </Typography>
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
                       <Chip size="small" label={`Updated ${formatRelativeTime(diagram.updatedAt)}`} />
                       <Chip size="small" variant="outlined" label={`Created ${formatDate(diagram.createdAt)}`} />
                     </Stack>
@@ -697,7 +699,11 @@ export default function DiagramsPage() {
                   color="primary"
                   onChange={(_, value) => setPage(value)}
                 />
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }}>
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={2}
+                  sx={{ alignItems: { xs: "flex-start", sm: "center" } }}
+                >
                   <TextField
                     select
                     size="small"
@@ -763,9 +769,11 @@ export default function DiagramsPage() {
         }
         fullWidth
         maxWidth="sm"
-        PaperProps={{
-          sx: {
-            mt: { xs: 2, sm: 6 },
+        slotProps={{
+          paper: {
+            sx: {
+              mt: { xs: 2, sm: 6 },
+            },
           },
         }}
       >
@@ -793,8 +801,7 @@ export default function DiagramsPage() {
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 spacing={1}
-                alignItems={{ xs: "flex-start", sm: "center" }}
-                sx={{ mt: 1 }}
+                sx={{ mt: 1, alignItems: { xs: "flex-start", sm: "center" } }}
               >
                 <Chip
                   size="small"

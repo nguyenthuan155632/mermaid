@@ -1039,9 +1039,11 @@ export default function MermaidRenderer({
         open={isFullscreen}
         onClose={handleExitFullscreen}
         fullScreen
-        PaperProps={{
-          sx: {
-            bgcolor: "background.paper",
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: "background.paper",
+            },
           },
         }}
       >

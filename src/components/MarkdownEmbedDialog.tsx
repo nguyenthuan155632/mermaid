@@ -164,28 +164,30 @@ export default function MarkdownEmbedDialog({
         maxWidth="xs"
         fullWidth
         keepMounted
-        TransitionComponent={Transition}
-        PaperProps={{
-          sx: (muiTheme) => ({
-            m: 0,
-            borderRadius: {
-              xs: "18px 18px 0 0",
-              sm: muiTheme.spacing(2),
-            },
-            alignSelf: { xs: "flex-end", sm: "flex-end" },
-            ml: { sm: "auto" },
-            mr: { sm: muiTheme.spacing(2) },
-            width: "100%",
-            maxWidth: 420,
-            height: { xs: "70vh", sm: "auto" },
-            maxHeight: { xs: "70vh", sm: "75vh" },
-            border: `1px solid ${muiTheme.palette.divider}`,
-            boxShadow: "0 6px 30px rgba(15,23,42,0.07)",
-            backgroundColor:
-              muiTheme.palette.mode === "dark"
-                ? "rgba(15,18,20,0.96)"
-                : muiTheme.palette.background.paper,
-          }),
+        slots={{ transition: Transition }}
+        slotProps={{
+          paper: {
+            sx: (muiTheme) => ({
+              m: 0,
+              borderRadius: {
+                xs: "18px 18px 0 0",
+                sm: muiTheme.spacing(2),
+              },
+              alignSelf: { xs: "flex-end", sm: "flex-end" },
+              ml: { sm: "auto" },
+              mr: { sm: muiTheme.spacing(2) },
+              width: "100%",
+              maxWidth: 420,
+              height: { xs: "70vh", sm: "auto" },
+              maxHeight: { xs: "70vh", sm: "75vh" },
+              border: `1px solid ${muiTheme.palette.divider}`,
+              boxShadow: "0 6px 30px rgba(15,23,42,0.07)",
+              backgroundColor:
+                muiTheme.palette.mode === "dark"
+                  ? "rgba(15,18,20,0.96)"
+                  : muiTheme.palette.background.paper,
+            }),
+          },
         }}
       >
         <Stack spacing={1.5} sx={{ p: { xs: 1.5, sm: 2 } }}>
@@ -201,9 +203,8 @@ export default function MarkdownEmbedDialog({
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
                 variant="subtitle2"
-                fontSize="0.78rem"
                 noWrap
-                sx={{ letterSpacing: 0.2 }}
+                sx={{ fontSize: "0.78rem", letterSpacing: 0.2 }}
               >
                 {diagramTitle}
               </Typography>

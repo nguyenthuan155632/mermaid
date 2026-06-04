@@ -475,13 +475,15 @@ const ThreadCommentRenderer: React.FC<{
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
             onClick={(e) => e.stopPropagation()}
-            PaperProps={{
-              sx: {
-                borderRadius: "14px",
-                border: `1px solid ${notionPalette.cardBorder}`,
-                boxShadow: "0 25px 60px rgba(47, 52, 55, 0.18)",
-                minWidth: "180px",
-                overflow: "hidden",
+            slotProps={{
+              paper: {
+                sx: {
+                  borderRadius: "14px",
+                  border: `1px solid ${notionPalette.cardBorder}`,
+                  boxShadow: "0 25px 60px rgba(47, 52, 55, 0.18)",
+                  minWidth: "180px",
+                  overflow: "hidden",
+                },
               },
             }}
           >
@@ -780,16 +782,18 @@ export default function CommentPanel({
       anchor="right"
       open={isOpen}
       onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: 840, // Panel width (double the original 420px for better visibility)
-          maxWidth: "90vw",
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          bgcolor: notionPalette.surface,
-          borderLeft: `1px solid ${notionPalette.border}`,
-          boxShadow: "none",
+      slotProps={{
+        paper: {
+          sx: {
+            width: 840, // Panel width (double the original 420px for better visibility)
+            maxWidth: "90vw",
+            height: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            bgcolor: notionPalette.surface,
+            borderLeft: `1px solid ${notionPalette.border}`,
+            boxShadow: "none",
+          },
         },
       }}
     >

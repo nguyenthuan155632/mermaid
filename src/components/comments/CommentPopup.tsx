@@ -523,13 +523,15 @@ const ThreadCommentRenderer: React.FC<{
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
             onClick={(e) => e.stopPropagation()}
-            PaperProps={{
-              sx: {
-                borderRadius: "14px",
-                border: `1px solid ${notionPalette.cardBorder}`,
-                boxShadow: "0 25px 60px rgba(47, 52, 55, 0.18)",
-                minWidth: "180px",
-                overflow: "hidden",
+            slotProps={{
+              paper: {
+                sx: {
+                  borderRadius: "14px",
+                  border: `1px solid ${notionPalette.cardBorder}`,
+                  boxShadow: "0 25px 60px rgba(47, 52, 55, 0.18)",
+                  minWidth: "180px",
+                  overflow: "hidden",
+                },
               },
             }}
           >

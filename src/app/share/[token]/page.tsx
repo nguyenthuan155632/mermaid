@@ -289,7 +289,7 @@ export default function SharePage() {
             <Stack
               direction="row"
               spacing={1}
-              alignItems="center"
+              sx={{ alignItems: "center" }}
             >
               <Button
                 variant="text"
@@ -404,7 +404,7 @@ export default function SharePage() {
               width: { xs: "calc(100% - 24px)", md: 320 },
             }}
           >
-            <Stack direction="row" alignItems="flex-start" spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ letterSpacing: 1, textTransform: "uppercase" }}>
                   Shared diagram

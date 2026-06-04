@@ -117,7 +117,7 @@ export function LiveCursors({ cursors, users, currentUserId, editorRef, anonymou
             title={displayName}
             placement="top"
             arrow
-            componentsProps={{
+            slotProps={{
               tooltip: {
                 sx: {
                   backgroundColor: color,
