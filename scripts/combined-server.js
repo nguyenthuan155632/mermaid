@@ -42,23 +42,18 @@ app.prepare().then(() => {
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = parse(request.url || '', true);
 
-    console.log(`[WS] Upgrade request received for: ${pathname}`);
-
     // Only upgrade to WebSocket for /api/diagrams/[id]/ws paths
     if (pathname && pathname.match(/^\/api\/diagrams\/[^\/]+\/ws$/)) {
-      console.log(`[WS] Upgrading to WebSocket for: ${pathname}`);
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
     } else {
-      console.log(`[WS] Rejecting non-WebSocket path: ${pathname}`);
       // Not a WebSocket path, destroy the socket
       socket.destroy();
     }
   });
 
   wss.on('connection', (ws, request) => {
-    console.log(`[WS] New WebSocket connection from ${request.socket.remoteAddress}, URL: ${request.url}`);
     let userId = null;
     let diagramId = null;
     let userInfo = null;
@@ -71,7 +66,6 @@ app.prepare().then(() => {
 
     const heartbeatInterval = setInterval(() => {
       if (!isAlive) {
-        console.log(`[WS] Connection appears dead, terminating`);
         clearInterval(heartbeatInterval);
         return ws.terminate();
       }
@@ -82,7 +76,6 @@ app.prepare().then(() => {
     ws.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
-        console.log(`[WS] Received message type: ${message.type} from user: ${userId || message.userId} in room: ${diagramId}`);
 
         switch (message.type) {
           case 'join_room':
@@ -116,7 +109,6 @@ app.prepare().then(() => {
                 oldWs.close(1000, 'Replaced by new connection');
                 // Skip the set below since we already set it above
                 const currentUsers = getUniqueUsers(room);
-                console.log(`[WS] User ${userId} replaced connection in room ${diagramId}. Total unique users: ${currentUsers.length}`);
                 broadcastToRoom(diagramId, {
                   type: 'user_presence',
                   data: {
@@ -135,8 +127,6 @@ app.prepare().then(() => {
             // Send current users to everyone in the room (deduplicated by userId)
             const currentUsers = getUniqueUsers(room);
 
-            console.log(`[WS] User ${userId} joined room ${diagramId}. Total unique users: ${currentUsers.length}`);
-
             broadcastToRoom(diagramId, {
               type: 'user_presence',
               data: {
@@ -149,15 +139,12 @@ app.prepare().then(() => {
 
           case 'code_change':
             if (diagramId && userId) {
-              console.log(`[WS] Broadcasting code_change to room ${diagramId}`);
               broadcastToRoom(diagramId, {
                 type: 'code_change',
                 data: message.data,
                 userId,
                 timestamp: Date.now()
               }, ws); // Don't send back to sender
-            } else {
-              console.warn(`[WS] Cannot broadcast code_change - diagramId: ${diagramId}, userId: ${userId}`);
             }
             break;
 
@@ -228,12 +215,11 @@ app.prepare().then(() => {
             break;
         }
       } catch (error) {
-        console.error('❌ Error processing message:', error);
+        console.error('Error processing message:', error);
       }
     });
 
-    ws.on('close', (code, reason) => {
-      console.log(`[WS] Connection closed - code: ${code}, reason: ${reason}, userId: ${userId}, diagramId: ${diagramId}`);
+    ws.on('close', () => {
       clearInterval(heartbeatInterval);
       if (userId && diagramId) {
         // Remove user from room only if this is the current connection
@@ -244,8 +230,6 @@ app.prepare().then(() => {
           // Only remove if this is the same connection (not replaced by a new one)
           if (existingConnection && existingConnection.ws === ws) {
             room.delete(userId);
-
-            console.log(`[WS] User ${userId} left room ${diagramId}`);
 
             // Notify remaining users (deduplicated)
             const remainingUsers = getUniqueUsers(room);
@@ -263,15 +247,13 @@ app.prepare().then(() => {
             if (room.size === 0) {
               rooms.delete(diagramId);
             }
-          } else {
-            console.log(`[WS] Ignoring close for ${userId} - connection was replaced`);
           }
         }
       }
     });
 
     ws.on('error', (error) => {
-      console.error('❌ WebSocket error:', error);
+      console.error('WebSocket error:', error);
     });
   });
 
@@ -285,7 +267,7 @@ app.prepare().then(() => {
       const match = pathname.match(/\/api\/diagrams\/([^\/]+)\/ws/);
       return match ? match[1] : null;
     } catch (error) {
-      console.error('❌ Error extracting diagram ID:', error);
+      console.error('Error extracting diagram ID:', error);
       return null;
     }
   }
@@ -303,15 +285,11 @@ app.prepare().then(() => {
         // This ensures we don't duplicate users
         if (!userMap.has(userId)) {
           userMap.set(userId, userInfo);
-        } else {
-          console.log(`[WS] Duplicate user ${userId} detected, skipping`);
         }
       }
     });
 
-    const uniqueUsers = Array.from(userMap.values());
-    console.log(`[WS] getUniqueUsers: ${room.size} connections -> ${uniqueUsers.length} unique users`);
-    return uniqueUsers;
+    return Array.from(userMap.values());
   }
 
   function broadcastToRoom(diagramId, message, excludeWs = null) {
@@ -335,19 +313,15 @@ app.prepare().then(() => {
 
   // Graceful shutdown
   process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server');
     wss.close();
     server.close(() => {
-      console.log('HTTP server closed');
       process.exit(0);
     });
   });
 
   process.on('SIGINT', () => {
-    console.log('SIGINT signal received: closing HTTP server');
     wss.close();
     server.close(() => {
-      console.log('HTTP server closed');
       process.exit(0);
     });
   });

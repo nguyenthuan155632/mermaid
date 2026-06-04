@@ -357,12 +357,14 @@ export default function CommentIndicator({
         open={isContextMenuOpen}
         onClose={handleContextMenuClose}
         onClick={(e) => e.stopPropagation()}
-        PaperProps={{
-          sx: {
-            borderRadius: '6px',
-            border: '1px solid #e9ecef',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            minWidth: '180px',
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: '6px',
+              border: '1px solid #e9ecef',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              minWidth: '180px',
+            },
           },
         }}
       >

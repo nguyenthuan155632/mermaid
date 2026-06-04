@@ -59,10 +59,12 @@ export default function SamplesSidebar({
       anchor="right"
       open={open}
       onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: { xs: "100%", sm: 500 },
-          bgcolor: "#fafafa",
+      slotProps={{
+        paper: {
+          sx: {
+            width: { xs: "100%", sm: 500 },
+            bgcolor: "#fafafa",
+          },
         },
       }}
     >

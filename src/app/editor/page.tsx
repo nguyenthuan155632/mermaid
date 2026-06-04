@@ -25,6 +25,8 @@ import {
   Collapse,
   Chip,
   CircularProgress,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Save,
@@ -110,6 +112,18 @@ function EditorContent() {
     actions: false,
     history: false,
   });
+  const [notification, setNotification] = useState<{
+    message: string;
+    severity: 'success' | 'error' | 'warning' | 'info';
+  } | null>(null);
+
+  const showNotification = useCallback((message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    setNotification({ message, severity });
+  }, []);
+
+  const hideNotification = useCallback(() => {
+    setNotification(null);
+  }, []);
 
   const debouncedCode = useDebounce(code, 300);
   const theme = useTheme();
@@ -464,7 +478,7 @@ function EditorContent() {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      alert("Please enter a title for your diagram");
+      showNotification("Please enter a title for your diagram", "warning");
       return;
     }
 
@@ -500,12 +514,12 @@ function EditorContent() {
         await fetchSnapshots(nextDiagramId);
       }
       setSaveSuccess(true);
-      alert("Diagram saved successfully!");
+      showNotification("Diagram saved successfully!", "success");
 
       // Reset success state after animation
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch {
-      alert("Failed to save diagram");
+      showNotification("Failed to save diagram", "error");
     } finally {
       setSaving(false);
     }
@@ -532,9 +546,9 @@ function EditorContent() {
       setDiagramId(data.id);
       setShareToken(data.shareToken || null);
       await fetchSnapshots(data.id);
-      alert("Diagram reverted to the selected snapshot");
+      showNotification("Diagram reverted to the selected snapshot", "success");
     } catch {
-      alert("Failed to revert snapshot");
+      showNotification("Failed to revert snapshot", "error");
     } finally {
       setRevertingSnapshotId(null);
     }
@@ -545,7 +559,7 @@ function EditorContent() {
       await exportToPNG(debouncedCode, title || "diagram", pngResolution, pngBackground);
       setPngDialogOpen(false);
     } catch {
-      alert("Failed to export PNG");
+      showNotification("Failed to export PNG", "error");
     }
   };
 
@@ -553,13 +567,13 @@ function EditorContent() {
     try {
       await exportToSVG(debouncedCode, title || "diagram", 'white');
     } catch {
-      alert("Failed to export SVG");
+      showNotification("Failed to export SVG", "error");
     }
   };
 
   const handleShare = async () => {
     if (!activeDiagramId) {
-      alert("Please save the diagram first");
+      showNotification("Please save the diagram first", "warning");
       return;
     }
 
@@ -576,9 +590,9 @@ function EditorContent() {
       setShareToken(data.shareToken || null);
       const shareUrl = `${window.location.origin}/share/${data.shareToken}`;
       await navigator.clipboard.writeText(shareUrl);
-      alert("Share link copied to clipboard!");
+      showNotification("Share link copied to clipboard!", "success");
     } catch {
-      alert("Failed to generate share link");
+      showNotification("Failed to generate share link", "error");
     }
   };
 
@@ -602,9 +616,9 @@ function EditorContent() {
 
       const data = await response.json();
       setCode(data.fixedCode);
-      alert(`Fixed! ${data.explanation}`);
+      showNotification(`Fixed! ${data.explanation}`, "success");
     } catch {
-      alert("Failed to fix diagram with AI");
+      showNotification("Failed to fix diagram with AI", "error");
     } finally {
       setFixing(false);
     }
@@ -621,7 +635,7 @@ function EditorContent() {
 
     if (snapshotsLoading) {
       return (
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
           <CircularProgress size={16} thickness={5} />
           <Typography variant="body2" color="text.secondary">
             Loading history…
@@ -652,7 +666,11 @@ function EditorContent() {
                 bgcolor: isCurrent ? "#f8fafc" : "white",
               }}
             >
-              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{ alignItems: "center", justifyContent: "space-between" }}
+              >
                 <Typography
                   variant="body2"
                   sx={{
@@ -797,7 +815,7 @@ function EditorContent() {
             <Stack
               direction="row"
               spacing={1}
-              alignItems="center"
+              sx={{ alignItems: "center" }}
             >
               <Button
                 variant="text"
@@ -990,9 +1008,9 @@ function EditorContent() {
               <Box sx={{ p: 2 }}>
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
                   sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     mb: 1,
                     cursor: "pointer",
                     userSelect: "none"
@@ -1028,9 +1046,9 @@ function EditorContent() {
               <Box sx={{ p: 2 }}>
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
                   sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     mb: 1,
                     cursor: "pointer",
                     userSelect: "none"
@@ -1112,16 +1130,16 @@ function EditorContent() {
                 <Stack
                   direction="row"
                   spacing={1}
-                  alignItems="center"
-                  justifyContent="space-between"
                   sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     mb: 1,
                     cursor: "pointer",
                     userSelect: "none"
                   }}
                   onClick={() => toggleSection("history")}
                 >
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                     <History fontSize="small" color="action" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                       Version History
@@ -1277,11 +1295,13 @@ function EditorContent() {
           open={historyDrawerOpen}
           onClose={() => setHistoryDrawerOpen(false)}
           keepMounted
-          PaperProps={{
-            sx: {
-              width: "85vw",
-              maxWidth: 360,
-              bgcolor: "#fafafa",
+          slotProps={{
+            paper: {
+              sx: {
+                width: "85vw",
+                maxWidth: 360,
+                bgcolor: "#fafafa",
+              },
             },
           }}
         >
@@ -1320,12 +1340,14 @@ function EditorContent() {
           open={codeDrawerOpen}
           onClose={() => setCodeDrawerOpen(false)}
           keepMounted
-          PaperProps={{
-            sx: {
-              height: "50vh",
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              bgcolor: "#fafafa",
+          slotProps={{
+            paper: {
+              sx: {
+                height: "50vh",
+                borderTopLeftRadius: 16,
+                borderTopRightRadius: 16,
+                bgcolor: "#fafafa",
+              },
             },
           }}
           transitionDuration={300}
@@ -1441,9 +1463,11 @@ function EditorContent() {
         onClose={() => setPngDialogOpen(false)}
         maxWidth="lg"
         fullWidth
-        PaperProps={{
-          sx: {
-            height: '80vh',
+        slotProps={{
+          paper: {
+            sx: {
+              height: "80vh",
+            },
           }
         }}
       >
@@ -1487,7 +1511,7 @@ function EditorContent() {
                     control={<Radio />}
                     label={
                       <Box>
-                        <Typography variant="body1" fontWeight={600}>PNG</Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>PNG</Typography>
                         <Typography variant="caption" color="text.secondary">
                           High quality raster image
                         </Typography>
@@ -1506,7 +1530,7 @@ function EditorContent() {
                     control={<Radio disabled />}
                     label={
                       <Box>
-                        <Typography variant="body1" fontWeight={600}>SVG</Typography>
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>SVG</Typography>
                         <Typography variant="caption" color="text.secondary">
                           Scalable vector graphics
                         </Typography>
@@ -1538,7 +1562,7 @@ function EditorContent() {
                     control={<Radio />}
                     label={
                       <Box>
-                        <Typography variant="body2" fontWeight={500}>{option.label}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{option.label}</Typography>
                         <Typography variant="caption" color="text.secondary">
                           {option.desc}
                         </Typography>
@@ -1723,6 +1747,25 @@ function EditorContent() {
           diagramTitle={title || "diagram"}
           baseUrl={window.location.origin}
         />
+      )}
+
+      {/* Notification Snackbar */}
+      {notification && (
+        <Snackbar
+          open={true}
+          autoHideDuration={4000}
+          onClose={hideNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert
+            onClose={hideNotification}
+            severity={notification.severity}
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
       )}
     </Box >
   );

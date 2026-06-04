@@ -13,6 +13,7 @@ export const authConfig = {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      checks: ["none"],
       async profile(profile) {
         // Check if user already exists
         const existingUser = await db

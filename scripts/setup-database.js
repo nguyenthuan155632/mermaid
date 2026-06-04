@@ -18,6 +18,7 @@ async function setupDatabase() {
   const dbUrl = process.env.DATABASE_URL;
 
   if (!dbUrl) {
+    console.error('DATABASE_URL environment variable is required');
     process.exit(1);
   }
 
@@ -38,16 +39,18 @@ async function setupDatabase() {
 
     try {
       await execAsync(createDbCommand);
+      console.log(`✅ Database '${dbName}' created successfully`);
     } catch (error) {
       if (!error.message.includes('already exists')) {
         throw error;
       }
+      console.log(`ℹ️  Database '${dbName}' already exists`);
     }
 
-  } catch {
+  } catch (error) {
+    console.error('❌ Failed to setup database:', error.message);
     process.exit(1);
   }
 }
 
 setupDatabase();
-

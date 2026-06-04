@@ -4,15 +4,71 @@ A full-featured web application for creating and editing Mermaid diagrams, built
 
 ## Features
 
-- **Real-time Diagram Editing**: Code editor with live preview of Mermaid diagrams
-- **Diagram Management**: Save, edit, and delete multiple diagrams
-- **User Authentication**: Secure authentication using NextAuth.js v5
-- **Sample Diagrams**: Pre-built templates for various diagram types
-- **Error Detection**: Automatic syntax error detection and display
-- **AI-Powered Error Fixing**: Google Gemini AI integration for automatic error correction
-- **Export Functionality**: Export diagrams to PNG and SVG formats
-- **Preview Controls**: Zoom in/out and fullscreen mode
-- **Sharing**: Generate shareable links for diagrams
+### 🎨 **Diagram Editing & Rendering**
+- **Real-time Diagram Editing**: Monaco code editor with live preview of Mermaid diagrams
+- **Support for All Mermaid Types**: Flowchart, sequence, class, state, ER, gantt, pie, journey, gitgraph, and more
+- **Error Detection**: Automatic syntax error detection with clear error messages
+- **Preview Controls**: Zoom in/out controls and fullscreen mode for distraction-free viewing
+
+### 🤝 **Real-Time Collaboration**
+- **Live Collaborative Editing**: Multiple users can edit the same diagram simultaneously
+- **Live Cursors**: See other users' cursor positions in real-time with color-coded indicators
+- **User Presence**: View active collaborators with user avatars and names
+- **Anonymous Collaboration**: Support for anonymous users with generated session IDs
+- **Real-time Code Synchronization**: Instant synchronization of code changes across all connected users
+
+### 💬 **Advanced Commenting System**
+- **Visual Comment Indicators**: Click anywhere on diagrams to add comments with visual markers
+- **Threaded Conversations**: Multi-level reply system with hierarchical organization
+- **Real-time Comment Updates**: Comments appear instantly for all users
+- **Comment Resolution**: Mark threads as resolved to keep discussions organized
+- **Comment Panel & Popup**: Sidebar for full comment management and quick popup access
+- **Comment Mode Toggle**: Switch between editing and commenting modes seamlessly
+
+### 🔐 **User Authentication & Management**
+- **NextAuth.js v5 Integration**: Secure authentication with multiple providers
+- **Email/Password Authentication**: Traditional login with bcryptjs password hashing
+- **Google OAuth**: Single sign-on with Google accounts
+- **User Session Management**: Persistent sessions with NextAuth middleware
+
+### 📊 **Diagram Management**
+- **Diagram CRUD Operations**: Create, read, update, and delete multiple diagrams
+- **Diagram Organization**: Save and organize diagrams in user-specific collections
+- **Version Control**: Automatic snapshots with ability to revert to previous versions
+- **Diagram Search**: Find diagrams by title and content
+
+### 🚀 **AI-Powered Features**
+- **AI Error Fixing**: Google Gemini AI integration for automatic error correction
+- **Smart Suggestions**: AI-powered recommendations for diagram improvements
+- **Error Explanation**: AI provides clear explanations of what went wrong and how fixes work
+
+### 🌐 **Sharing & Export**
+- **Shareable Links**: Generate secure tokens for sharing diagrams with others
+- **Public/Private Diagrams**: Control diagram visibility and access permissions
+- **Multiple Export Formats**: Export diagrams to PNG and SVG with customizable options
+  - **PNG Export**: High-resolution PNG with adjustable pixel ratio (1x-4x)
+  - **SVG Export**: Scalable vector graphics with background options
+  - **Background Customization**: White or transparent backgrounds for both formats
+- **Export Tokens**: Secure tokens for accessing exported diagrams
+
+### 📚 **Sample Templates**
+- **Pre-built Diagrams**: Collection of sample diagrams for various use cases
+- **Template Loading**: Quick start with professionally designed templates
+- **Customizable Samples**: Modify and save samples as your own diagrams
+
+### 🔧 **Developer Experience**
+- **TypeScript**: Full type safety throughout the application
+- **Material-UI**: Modern, accessible user interface components
+- **Database Integration**: PostgreSQL with Drizzle ORM for type-safe database operations
+- **Development Tools**: Built-in database studio and migration management
+- **Real-time WebSocket**: Separate WebSocket server for collaborative features
+
+### 🏗️ **Architecture & Infrastructure**
+- **Next.js 16+**: Modern React framework with App Router
+- **PostgreSQL Database**: Robust relational database with Drizzle ORM
+- **WebSocket Server**: Dedicated server for real-time collaboration
+- **Puppeteer Integration**: Server-side rendering for export functionality
+- **Responsive Design**: Mobile-friendly interface that works on all devices
 
 ## Tech Stack
 
@@ -48,7 +104,7 @@ Create a `.env.local` file in the root directory:
 DATABASE_URL=postgresql://user:password@host:port/database
 NEXTAUTH_SECRET=your-random-secret-here
 NEXTAUTH_URL=http://localhost:4025
-GEMINI_API_KEY=your-gemini-api-key
+GOOGLE_API_KEY=your-gemini-api-key
 ```
 
 **Generate NEXTAUTH_SECRET**:
@@ -119,7 +175,7 @@ In Railway dashboard, add all environment variables from `.env.local`:
 - `DATABASE_URL` (automatically provided by Railway PostgreSQL service)
 - `NEXTAUTH_SECRET`
 - `NEXTAUTH_URL` (your Railway app URL)
-- `GEMINI_API_KEY`
+- `GOOGLE_API_KEY`
 
 ### 3. Deploy
 

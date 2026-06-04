@@ -25,6 +25,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
     return NextResponse.json(
       { error: "Failed to fix diagram" },
       { status: 500 }

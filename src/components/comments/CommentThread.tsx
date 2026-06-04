@@ -132,7 +132,7 @@ export default function CommentThread({
             </Box>
           </Box>
 
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
             {comment.isResolved && (
               <Chip
                 icon={<CheckCircleIcon fontSize="small" />}
@@ -231,12 +231,14 @@ export default function CommentThread({
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
         onClick={(e) => e.stopPropagation()}
-        PaperProps={{
-          sx: {
-            borderRadius: "8px",
-            border: "1px solid #e9ecef",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-            minWidth: "180px",
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "8px",
+              border: "1px solid #e9ecef",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+              minWidth: "180px",
+            },
           },
         }}
       >

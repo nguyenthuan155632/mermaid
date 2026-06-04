@@ -236,10 +236,11 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
+        console.log(`[WS] Connection opened successfully!`);
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
 
-        if (wsRef.current) {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           const userInfo = getEffectiveUserInfo();
           const joinPayload = {
             userId: userInfo.userId,
@@ -252,12 +253,17 @@ export function useWebSocket(channelId: string | null, anonymousMode: boolean = 
               : {}),
           };
 
-          wsRef.current.send(JSON.stringify({
+          const joinMessage = JSON.stringify({
             type: "join_room",
             data: joinPayload,
             userId: userInfo.userId,
             timestamp: Date.now(),
-          }));
+          });
+
+          console.log(`[WS] Sending join_room message:`, joinMessage);
+          wsRef.current.send(joinMessage);
+        } else {
+          console.error(`[WS] Cannot send join_room - WebSocket not open, readyState: ${wsRef.current?.readyState}`);
         }
       };
 

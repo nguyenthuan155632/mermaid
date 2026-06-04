@@ -203,6 +203,9 @@ export default function CodeEditor({ value, onChange }: CodeEditorProps) {
     const model = editor.getModel();
     if (model) {
       monaco.editor.setModelLanguage(model, "mermaid");
+
+      // Clear any existing markers to hide syntax errors
+      monaco.editor.setModelMarkers(model, "mermaid", []);
     }
   };
 
